@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Name</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Karla:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#f7f4ef; --bg2:#ede7dc; --bg3:#e3dbd0;
+      --text:#1c1b18; --muted:#6b6456; --faint:#a39887;
+      --accent:#4a7a5a; --border:rgba(90,70,50,0.13); --border2:rgba(90,70,50,0.24);
+    }
+    html { scroll-behavior: smooth; }
+    body { background:var(--bg); color:var(--text); font-family:'Karla',sans-serif; font-weight:300; line-height:1.7; }
+    body::before { content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+      background: radial-gradient(ellipse 70% 55% at 92% 8%, rgba(110,155,90,0.08),transparent),
+                  radial-gradient(ellipse 45% 65% at 4% 92%, rgba(90,135,70,0.06),transparent); }
+    * { position:relative; z-index:1; }
+    a { color:inherit; text-decoration:none; }
+
+    /* NAV */
+    nav { position:fixed; top:0; left:0; right:0; z-index:200;
+      display:flex; justify-content:space-between; align-items:center;
+      padding:1.1rem 3.5rem;
+      background:rgba(247,244,239,0.84); backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--border); }
+    .nav-logo { font-family:'Cormorant Garant',serif; font-size:1.1rem; font-weight:400; }
+    .nav-links { display:flex; gap:2rem; list-style:none; }
+    .nav-links a { font-family:'IBM Plex Mono',monospace; font-size:0.68rem; letter-spacing:0.09em;
+      text-transform:uppercase; color:var(--muted); transition:color 0.2s; }
+    .nav-links a:hover { color:var(--accent); }
+
+    /* HERO */
+    .hero { min-height:100vh; display:grid; grid-template-columns:1fr 400px; padding-top:64px; }
+    .hero-left { padding:6rem 4rem 6rem 3.5rem; display:flex; flex-direction:column;
+      justify-content:center; border-right:1px solid var(--border2); }
+    .hero-tag { font-family:'IBM Plex Mono',monospace; font-size:0.68rem; letter-spacing:0.12em;
+      text-transform:uppercase; color:var(--accent); margin-bottom:1.5rem;
+      opacity:0; animation:up 0.7s 0.1s ease forwards; }
+    .hero-name { font-family:'Cormorant Garant',serif; font-size:clamp(3.8rem,7vw,6.5rem);
+      font-weight:300; line-height:1.0; letter-spacing:-0.01em; margin-bottom:0.5rem;
+      opacity:0; animation:up 0.8s 0.2s ease forwards; }
+    .hero-name em { font-style:italic; color:var(--accent); }
+    .hero-subtitle { font-family:'Cormorant Garant',serif; font-size:clamp(1.1rem,2vw,1.4rem);
+      font-style:italic; font-weight:300; color:var(--muted); margin-bottom:2rem;
+      opacity:0; animation:up 0.8s 0.3s ease forwards; }
+    .hero-bio { font-size:0.93rem; color:var(--muted); max-width:44ch; line-height:1.75; margin-bottom:2.5rem;
+      opacity:0; animation:up 0.8s 0.4s ease forwards; }
+    .hero-cta { display:flex; gap:0.75rem; flex-wrap:wrap;
+      opacity:0; animation:up 0.8s 0.5s ease forwards; }
+    .btn { font-family:'IBM Plex Mono',monospace; font-size:0.69rem; letter-spacing:0.08em;
+      text-transform:uppercase; padding:0.65rem 1.4rem; border-radius:1px;
+      transition:all 0.2s; cursor:pointer; display:inline-flex; align-items:center; gap:0.5rem; }
+    .btn-fill { background:var(--accent); color:#fff; border:1px solid var(--accent); }
+    .btn-fill:hover { background:#3d6b4c; }
+    .btn-line { border:1px solid var(--border2); color:var(--muted); }
+    .btn-line:hover { border-color:var(--accent); color:var(--accent); }
+
+    /* PHOTO */
+    .hero-right { background:var(--bg2); position:relative; overflow:hidden;
+      opacity:0; animation:fadeIn 1s 0.3s ease forwards; }
+    .photo-wrap { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+    .photo-placeholder { width:240px; height:300px; background:var(--bg3);
+      border:1px solid var(--border2); display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:0.75rem;
+      font-family:'IBM Plex Mono',monospace; font-size:0.7rem; color:var(--faint); letter-spacing:0.08em; }
+    .leaf { position:absolute; pointer-events:none; opacity:0.17; }
+
+    /* WORK */
+    .work { padding:5rem 3.5rem; border-top:1px solid var(--border); }
+    .field { margin-bottom:5rem; }
+    .field-header { display:grid; grid-template-columns:auto 1fr; gap:1.5rem;
+      align-items:baseline; margin-bottom:2.5rem; padding-bottom:1rem;
+      border-bottom:1px solid var(--border2); }
+    .field-num { font-family:'IBM Plex Mono',monospace; font-size:0.65rem; color:var(--faint); letter-spacing:0.1em; padding-top:0.2rem; }
+    .priority-badge { display:inline-flex; align-items:center; gap:0.4rem;
+      font-family:'IBM Plex Mono',monospace; font-size:0.62rem; letter-spacing:0.1em;
+      text-transform:uppercase; padding:0.2rem 0.65rem;
+      background:rgba(74,122,90,0.1); border:1px solid rgba(74,122,90,0.3); color:var(--accent);
+      border-radius:1px; margin-bottom:0.5rem; }
+    .priority-badge::before { content:'●'; font-size:0.5rem; }
+    .field-name { font-family:'Cormorant Garant',serif; font-size:clamp(1.8rem,3.5vw,2.8rem); font-weight:300; line-height:1.1; }
+    .field-name em { font-style:italic; color:var(--accent); }
+    .field-desc { font-family:'Cormorant Garant',serif; font-size:1rem; font-style:italic; color:var(--faint); margin-top:0.2rem; }
+
+    /* CARDS */
+    .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+      gap:1px; background:var(--border); border:1px solid var(--border); }
+    .card { background:var(--bg); padding:1.75rem 2rem 2rem;
+      display:flex; flex-direction:column; transition:background 0.25s; }
+    .card:hover { background:#eee8dd; }
+    .card-wide { grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr; gap:2.5rem; }
+    .card-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.25rem; }
+    .card-type { font-family:'IBM Plex Mono',monospace; font-size:0.62rem; letter-spacing:0.1em; color:var(--faint); text-transform:uppercase; }
+    .card-icon { width:34px; height:34px; background:var(--bg2); border:1px solid var(--border2);
+      display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0; }
+    .card-title { font-family:'Cormorant Garant',serif; font-size:1.4rem; font-weight:400; line-height:1.2; margin-bottom:0.6rem; }
+    .card-desc { font-size:0.87rem; color:var(--muted); line-height:1.65; flex:1; margin-bottom:1.25rem; }
+    .card-tags { display:flex; flex-wrap:wrap; gap:0.35rem; margin-bottom:1.25rem; }
+    .tag { font-family:'IBM Plex Mono',monospace; font-size:0.63rem; letter-spacing:0.04em;
+      padding:0.2rem 0.55rem; background:var(--bg2); border:1px solid var(--border); color:var(--muted); }
+    .tag-a { background:rgba(74,122,90,0.09); border-color:rgba(74,122,90,0.28); color:var(--accent); }
+    .card-link { font-family:'IBM Plex Mono',monospace; font-size:0.7rem; letter-spacing:0.07em;
+      color:var(--accent); display:inline-flex; align-items:center; gap:0.35rem;
+      margin-top:auto; transition:gap 0.2s; }
+    .card-link:hover { gap:0.6rem; }
+    .card-link::after { content:'→'; }
+
+    /* ABOUT */
+    .about { border-top:1px solid var(--border); padding:5rem 3.5rem;
+      display:grid; grid-template-columns:2fr 1fr; gap:5rem; align-items:start; }
+    .about h2 { font-family:'Cormorant Garant',serif; font-size:clamp(2rem,3.5vw,2.8rem);
+      font-weight:300; line-height:1.15; margin-bottom:1.5rem; }
+    .about h2 em { font-style:italic; color:var(--accent); }
+    .about p { font-size:0.92rem; color:var(--muted); margin-bottom:0.9rem; }
+    .side-label { font-family:'IBM Plex Mono',monospace; font-size:0.68rem; letter-spacing:0.1em;
+      text-transform:uppercase; color:var(--faint); margin-bottom:1rem; }
+    .edu-item { padding:0.9rem 0; border-bottom:1px solid var(--border); }
+    .edu-item:first-of-type { border-top:1px solid var(--border); }
+    .edu-deg { font-family:'Cormorant Garant',serif; font-size:1rem; font-weight:400; }
+    .edu-school { font-size:0.82rem; color:var(--muted); margin-top:0.15rem; }
+    .edu-year { font-family:'IBM Plex Mono',monospace; font-size:0.65rem; color:var(--faint); margin-top:0.25rem; }
+
+    /* CONTACT */
+    .contact { border-top:1px solid var(--border); padding:5rem 3.5rem;
+      background:var(--bg2); display:flex; flex-direction:column; align-items:center; text-align:center; }
+    .contact h2 { font-family:'Cormorant Garant',serif; font-size:clamp(2.5rem,5vw,4.5rem);
+      font-weight:300; line-height:1.05; margin-bottom:0.75rem; }
+    .contact h2 em { font-style:italic; color:var(--accent); }
+    .contact p { color:var(--muted); font-size:0.9rem; margin-bottom:2rem; }
+    .contact-links { display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:center; }
+
+    /* FOOTER */
+    footer { border-top:1px solid var(--border); padding:1.5rem 3.5rem;
+      display:flex; justify-content:space-between; align-items:center; }
+    footer p { font-family:'IBM Plex Mono',monospace; font-size:0.65rem; letter-spacing:0.07em; color:var(--faint); }
+
+    /* ANIMATIONS */
+    @keyframes up { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    .reveal { opacity:0; transform:translateY(14px); transition:opacity 0.65s ease,transform 0.65s ease; }
+    .reveal.visible { opacity:1; transform:none; }
+
+    @media(max-width:900px){
+      nav{padding:1rem 1.5rem}
+      .hero{grid-template-columns:1fr; min-height:auto}
+      .hero-left{padding:5rem 1.5rem 3rem; border-right:none; border-bottom:1px solid var(--border)}
+      .hero-right{min-height:280px}
+      .card-wide{grid-template-columns:1fr}
+      .work{padding:4rem 1.5rem}
+      .about{grid-template-columns:1fr; gap:3rem; padding:4rem 1.5rem}
+      .contact{padding:4rem 1.5rem}
+      footer{flex-direction:column; gap:0.5rem; padding:1.5rem}
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">Your Name</span>
+  <ul class="nav-links">
+    <li><a href="#rtl">RTL</a></li>
+    <li><a href="#ml">ML</a></li>
+    <li><a href="#swe">SWE</a></li>
+    <li><a href="#vlsi">VLSI</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <p class="hero-tag">Hardware · ML · Software</p>
+    <h1 class="hero-name">Your<br><em>Name</em></h1>
+    <p class="hero-subtitle">RTL Design Engineer &amp; ML Systems Developer</p>
+    <p class="hero-bio">
+      I design digital hardware from RTL to silicon — FPGA, SoC prototyping, ASIC physical
+      design — and build ML inference systems optimized for edge deployment.
+      Currently at [University / Company].
+    </p>
+    <div class="hero-cta">
+      <a href="#rtl" class="btn btn-fill">See my work</a>
+      <a href="YOUR_RESUME.pdf" class="btn btn-line" target="_blank" rel="noopener">Resume</a>
+      <a href="https://github.com/yourusername" class="btn btn-line" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <!-- botanical leaf decorations -->
+    <svg class="leaf" style="top:-15px;right:-8px;width:240px" viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M100 12C142 12 178 52 178 102C178 152 142 192 100 192C78 192 58 172 48 142C100 142 142 100 142 58C142 36 122 18 100 12Z" fill="#5a8a6a"/>
+      <line x1="100" y1="12" x2="114" y2="142" stroke="#5a8a6a" stroke-width="1.2"/>
+      <line x1="113" y1="65" x2="150" y2="52" stroke="#5a8a6a" stroke-width="0.9"/>
+      <line x1="114" y1="88" x2="153" y2="78" stroke="#5a8a6a" stroke-width="0.9"/>
+      <line x1="114" y1="112" x2="150" y2="110" stroke="#5a8a6a" stroke-width="0.9"/>
+    </svg>
+    <svg class="leaf" style="bottom:25px;left:15px;width:100px;transform:rotate(155deg)" viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M100 12C142 12 178 52 178 102C178 152 142 192 100 192C78 192 58 172 48 142C100 142 142 100 142 58C142 36 122 18 100 12Z" fill="#5a8a6a"/>
+      <line x1="100" y1="12" x2="114" y2="142" stroke="#5a8a6a" stroke-width="1.2"/>
+    </svg>
+
+    <div class="photo-wrap">
+      <!--
+        SWAP IN YOUR PHOTO:
+        <img style="width:100%;height:100%;object-fit:cover;object-position:center top" src="photo.jpg" alt="Your Name" />
+      -->
+      <div class="photo-placeholder">
+        <svg width="46" height="46" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="18" r="10" stroke="#a39887" stroke-width="1.4"/><path d="M4 44c0-11 8.954-20 20-20s20 9 20 20" stroke="#a39887" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span>your-photo.jpg</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WORK -->
+<div class="work">
+
+  <!-- RTL DESIGN -->
+  <div class="field reveal" id="rtl">
+    <div class="field-header">
+      <span class="field-num">01</span>
+      <div>
+        <div class="priority-badge">Primary Focus</div>
+        <h2 class="field-name">RTL <em>Design</em></h2>
+        <p class="field-desc">FPGA development, SoC prototyping &amp; ASIC physical design</p>
+      </div>
+    </div>
+    <div class="cards">
+      <!-- FEATURED wide -->
+      <div class="card card-wide reveal">
+        <div>
+          <div class="card-top"><span class="card-type">SoC Prototype — Featured</span><div class="card-icon">⬡</div></div>
+          <h3 class="card-title">SoC Name / FPGA Platform</h3>
+          <p class="card-desc">
+            Describe the SoC you prototyped — processors, bus interconnects, peripherals.
+            What FPGA board? Clock frequency achieved? What problem did it solve
+            and what were the key technical challenges in the RTL design?
+          </p>
+          <div class="card-tags">
+            <span class="tag tag-a">SystemVerilog</span><span class="tag tag-a">Xilinx Vivado</span>
+            <span class="tag">AXI4</span><span class="tag">RISC-V</span><span class="tag">Timing Closure</span>
+          </div>
+          <a href="https://github.com/yourusername/soc-project" class="card-link" target="_blank" rel="noopener">View project</a>
+        </div>
+        <div>
+          <div class="card-top"><span class="card-type">ASIC Route</span><div class="card-icon">◈</div></div>
+          <h3 class="card-title">ASIC Design / Tapeout</h3>
+          <p class="card-desc">
+            Describe the ASIC project — design node (e.g. TSMC 45nm), the block you owned,
+            tools used (Cadence Innovus, Synopsys DC), and outcomes.
+            Highlight area, timing, and power results.
+          </p>
+          <div class="card-tags">
+            <span class="tag tag-a">Cadence Innovus</span><span class="tag tag-a">Synopsys DC</span>
+            <span class="tag">Static Timing Analysis</span><span class="tag">DRC/LVS</span><span class="tag">45nm</span>
+          </div>
+          <a href="https://github.com/yourusername/asic-project" class="card-link" target="_blank" rel="noopener">View project</a>
+        </div>
+      </div>
+      <!-- FPGA -->
+      <div class="card reveal">
+        <div class="card-top"><span class="card-type">FPGA</span><div class="card-icon">▤</div></div>
+        <h3 class="card-title">FPGA Project Name</h3>
+        <p class="card-desc">
+          What did you implement on FPGA? A DSP pipeline, custom accelerator, comms protocol?
+          Mention the device family and the most interesting technical detail.
+        </p>
+        <div class="card-tags">
+          <span class="tag tag-a">Verilog</span><span class="tag">Xilinx Artix-7</span>
+          <span class="tag">DSP48</span><span class="tag">DMA</span>
+        </div>
+        <a href="https://github.com/yourusername/fpga-project" class="card-link" target="_blank" rel="noopener">View project</a>
+      </div>
+      <!-- VERIFICATION -->
+      <div class="card reveal">
+        <div class="card-top"><span class="card-type">Verification / RTL</span><div class="card-icon">✦</div></div>
+        <h3 class="card-title">Another RTL Project</h3>
+        <p class="card-desc">
+          UVM testbench, a custom peripheral, or pipeline implementation.
+          Describe the scope, your role, and the results.
+        </p>
+        <div class="card-tags">
+          <span class="tag tag-a">UVM</span><span class="tag">SystemVerilog</span><span class="tag">Simulation</span>
+        </div>
+        <a href="#" class="card-link">View project</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- MACHINE LEARNING -->
+  <div class="field reveal" id="ml">
+    <div class="field-header">
+      <span class="field-num">02</span>
+      <div>
+        <div class="priority-badge">Primary Focus</div>
+        <h2 class="field-name">Machine <em>Learning</em></h2>
+        <p class="field-desc">ML inference modeling, neural network optimization &amp; edge deployment</p>
+      </div>
+    </div>
+    <div class="cards">
+      <!-- FEATURED wide -->
+      <div class="card card-wide reveal">
+        <div>
+          <div class="card-top"><span class="card-type">Inference Engine — Featured</span><div class="card-icon">◉</div></div>
+          <h3 class="card-title">ML Inference Project</h3>
+          <p class="card-desc">
+            Describe the model architecture, target hardware (GPU, FPGA, microcontroller),
+            quantization strategy, and performance results —
+            latency, throughput, and accuracy tradeoffs achieved.
+          </p>
+          <div class="card-tags">
+            <span class="tag tag-a">PyTorch</span><span class="tag tag-a">TensorRT</span>
+            <span class="tag">INT8 Quant</span><span class="tag">ONNX</span><span class="tag">Edge Deploy</span>
+          </div>
+          <a href="https://github.com/yourusername/ml-inference" class="card-link" target="_blank" rel="noopener">View project</a>
+        </div>
+        <div>
+          <div class="card-top"><span class="card-type">Model / Research</span><div class="card-icon">◈</div></div>
+          <h3 class="card-title">ML Research / Second Project</h3>
+          <p class="card-desc">
+            A research project or second ML experience. Dataset, model, key result.
+            What did you learn about training, optimization, or
+            hardware-software co-design?
+          </p>
+          <div class="card-tags">
+            <span class="tag tag-a">Python</span><span class="tag">Transformer</span>
+            <span class="tag">Model Compression</span><span class="tag">NumPy</span>
+          </div>
+          <a href="https://github.com/yourusername/ml-research" class="card-link" target="_blank" rel="noopener">View project</a>
+        </div>
+      </div>
+      <!-- HW/SW -->
+      <div class="card reveal">
+        <div class="card-top"><span class="card-type">HW/SW Co-design</span><div class="card-icon">⬡</div></div>
+        <h3 class="card-title">ML Accelerator / HLS</h3>
+        <p class="card-desc">
+          Tying RTL and ML together — a custom accelerator, HLS datapath,
+          or systolic array implementation for neural network inference.
+        </p>
+        <div class="card-tags">
+          <span class="tag tag-a">Vivado HLS</span><span class="tag">Systolic Array</span><span class="tag">Fixed-Point</span>
+        </div>
+        <a href="#" class="card-link">View project</a>
+      </div>
+      <!-- EXPERIENCE -->
+      <div class="card reveal">
+        <div class="card-top"><span class="card-type">Industry / Internship</span><div class="card-icon">✦</div></div>
+        <h3 class="card-title">ML Experience at Company</h3>
+        <p class="card-desc">
+          Industry experience, internship, or research position in ML.
+          What team, what did you ship, and what was the measured impact?
+        </p>
+        <div class="card-tags">
+          <span class="tag">Deep Learning</span><span class="tag">MLOps</span><span class="tag">Production</span>
+        </div>
+        <a href="#" class="card-link">Learn more</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOFTWARE ENGINEERING -->
+  <div class="field reveal" id="swe">
+    <div class="field-header">
+      <span class="field-num">03</span>
+      <div>
+        <h2 class="field-name">Software <em>Engineering</em></h2>
+        <p class="field-desc">Systems software &amp; tools development</p>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card reveal">
+        <div class="card-top"><span class="card-type">Software Project</span><div class="card-icon">▤</div></div>
+        <h3 class="card-title">Your SWE Project</h3>
+        <p class="card-desc">
+          Describe your software project — stack, the problem it solves,
+          and what makes it technically interesting: performance, architecture, scale, or novel approach.
+        </p>
+        <div class="card-tags">
+          <span class="tag tag-a">C++</span><span class="tag">Python</span>
+          <span class="tag">Linux</span><span class="tag">Embedded</span>
+        </div>
+        <a href="https://github.com/yourusername/swe-project" class="card-link" target="_blank" rel="noopener">View project</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- VLSI -->
+  <div class="field reveal" id="vlsi">
+    <div class="field-header">
+      <span class="field-num">04</span>
+      <div>
+        <h2 class="field-name"><em>VLSI</em></h2>
+        <p class="field-desc">Custom IC layout &amp; analog/mixed-signal design</p>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card reveal">
+        <div class="card-top"><span class="card-type">VLSI Project</span><div class="card-icon">◉</div></div>
+        <h3 class="card-title">Your VLSI Project</h3>
+        <p class="card-desc">
+          Custom cell layout, an analog block, a full-custom datapath, or class tapeout.
+          Mention the tool (Cadence Virtuoso, Magic), PDK, and results achieved.
+        </p>
+        <div class="card-tags">
+          <span class="tag tag-a">Cadence Virtuoso</span><span class="tag">SPICE</span>
+          <span class="tag">Custom Layout</span><span class="tag">DRC/LVS</span>
+        </div>
+        <a href="https://github.com/yourusername/vlsi-project" class="card-link" target="_blank" rel="noopener">View project</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /work -->
+
+<!-- ABOUT -->
+<section class="about" id="about">
+  <div class="reveal">
+    <h2>A bit about<br><em>who I am.</em></h2>
+    <p>I'm an electrical and computer engineering student focused on the intersection of
+    hardware design and machine learning — building efficient RTL and running inference
+    on constrained silicon.</p>
+    <p>I believe the most interesting problems today live at the hardware/software boundary.
+    My work spans RTL design, ASIC physical design, FPGA development, and on-device ML.</p>
+    <p>Outside engineering I enjoy hiking, reading about materials science,
+    and building things with my hands.</p>
+    <br/>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+      <a href="YOUR_RESUME.pdf" class="btn btn-fill" target="_blank" rel="noopener">Download resume</a>
+      <a href="https://linkedin.com/in/yourusername" class="btn btn-line" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+  <div class="reveal">
+    <p class="side-label">Education</p>
+    <div class="edu-item">
+      <p class="edu-deg">B.S. Electrical &amp; Computer Engineering</p>
+      <p class="edu-school">University Name</p>
+      <p class="edu-year">2022 – 2026</p>
+    </div>
+    <div class="edu-item">
+      <p class="edu-deg">Relevant Coursework</p>
+      <p class="edu-school">VLSI Design · Digital Systems · ML Systems · Computer Architecture · Embedded Systems</p>
+    </div>
+    <p class="side-label" style="margin-top:2rem;">Core Skills</p>
+    <div style="display:flex;flex-wrap:wrap;gap:0.35rem;">
+      <span class="tag tag-a">SystemVerilog</span><span class="tag tag-a">Verilog</span>
+      <span class="tag tag-a">PyTorch</span><span class="tag">Cadence Innovus</span>
+      <span class="tag">Synopsys DC</span><span class="tag">Vivado</span>
+      <span class="tag">TensorRT</span><span class="tag">C/C++</span>
+      <span class="tag">Python</span><span class="tag">SPICE</span>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="contact" id="contact">
+  <h2 class="reveal">Let's build<br>something <em>real.</em></h2>
+  <p class="reveal">Open to research roles, hardware/ML internships, and collaborations.</p>
+  <div class="contact-links reveal">
+    <a href="mailto:you@example.com" class="btn btn-fill">Send an email</a>
+    <a href="https://github.com/yourusername" class="btn btn-line" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://linkedin.com/in/yourusername" class="btn btn-line" target="_blank" rel="noopener">LinkedIn</a>
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 Your Name</p>
+  <p>RTL · ML · VLSI · Software</p>
+</footer>
+
+<script>
+  const els = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver(
+    es => es.forEach(e => { if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target);} }),
+    {threshold:0.08,rootMargin:'0px 0px -30px 0px'}
+  );
+  els.forEach(el => io.observe(el));
+</script>
+</body>
+</html>
