@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Network Inline Classification Engine — Daniel Carrascoza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;1,300;1,400&family=Karla:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#f7f4ef;--bg2:#ede7dc;--bg3:#e3dbd0;
+      --text:#1c1b18;--muted:#6b6456;--faint:#a39887;
+      --accent:#4a7a5a;--accent2:#3d6b4c;--accent-pale:rgba(74,122,90,0.10);
+      --border:rgba(90,70,50,0.13);--border2:rgba(90,70,50,0.26);
+      --gold:#b8860b;--gold-pale:rgba(184,134,11,0.10);
+    }
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);font-family:'Karla',sans-serif;font-weight:300;line-height:1.7}
+    body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 70% 55% at 92% 8%,rgba(100,150,80,0.07),transparent),
+                 radial-gradient(ellipse 45% 60% at 4% 92%,rgba(80,130,60,0.05),transparent)}
+    *{position:relative;z-index:1}
+    a{color:inherit;text-decoration:none}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;
+      display:flex;justify-content:space-between;align-items:center;
+      padding:1.1rem 3.5rem;
+      background:rgba(247,244,239,0.88);backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--border)}
+    .nav-logo{font-family:'Cormorant Garant',serif;font-size:1.1rem;font-weight:400}
+    .nav-back{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.09em;
+      text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:0.4rem;transition:color 0.2s}
+    .nav-back:hover{color:var(--accent)}
+    .nav-back::before{content:'←'}
+
+    /* BUTTONS */
+    .btn{font-family:'IBM Plex Mono',monospace;font-size:0.69rem;letter-spacing:0.08em;
+      text-transform:uppercase;padding:0.65rem 1.4rem;border-radius:1px;
+      transition:all 0.2s;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem}
+    .btn-fill{background:var(--accent);color:#fff;border:1px solid var(--accent)}
+    .btn-fill:hover{background:var(--accent2)}
+    .btn-line{border:1px solid var(--border2);color:var(--muted)}
+    .btn-line:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* TAGS */
+    .tag{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;letter-spacing:0.04em;
+      padding:0.2rem 0.55rem;background:var(--bg2);border:1px solid var(--border);color:var(--muted)}
+    .tag-a{background:var(--accent-pale);border-color:rgba(74,122,90,0.28);color:var(--accent)}
+
+    /* PAGE LAYOUT */
+    .page{max-width:980px;margin:0 auto;padding:7rem 3.5rem 6rem}
+
+    /* HERO BLOCK */
+    .proj-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.12em;
+      text-transform:uppercase;color:var(--accent);margin-bottom:1rem;
+      opacity:0;animation:up 0.6s 0.05s ease forwards}
+    .proj-title{font-family:'Cormorant Garant',serif;font-size:clamp(2.4rem,5.5vw,4.2rem);
+      font-weight:300;line-height:1.02;letter-spacing:-0.01em;margin-bottom:1rem;
+      opacity:0;animation:up 0.7s 0.1s ease forwards}
+    .proj-title em{font-style:italic;color:var(--accent)}
+    .proj-sub{font-family:'Cormorant Garant',serif;font-size:1.15rem;font-style:italic;
+      color:var(--muted);margin-bottom:1.75rem;
+      opacity:0;animation:up 0.7s 0.15s ease forwards}
+    .proj-lead{font-size:0.95rem;color:var(--muted);max-width:68ch;line-height:1.8;
+      opacity:0;animation:up 0.7s 0.2s ease forwards}
+    .tags-row{display:flex;flex-wrap:wrap;gap:0.35rem;margin:1.5rem 0 2rem;
+      opacity:0;animation:up 0.7s 0.25s ease forwards}
+    .proj-actions{display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:3rem;
+      opacity:0;animation:up 0.7s 0.3s ease forwards}
+
+    /* STAT STRIP */
+    .stat-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;
+      background:var(--border2);border:1px solid var(--border2);margin:2.5rem 0;
+      opacity:0;animation:up 0.7s 0.35s ease forwards}
+    .stat-cell{background:var(--bg);padding:1.4rem 1.25rem}
+    .stat-v{font-family:'Cormorant Garant',serif;font-size:2rem;font-weight:300;line-height:1;color:var(--text)}
+    .stat-l{font-family:'IBM Plex Mono',monospace;font-size:0.58rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-top:0.3rem}
+
+    /* SECTION CHROME */
+    .section{margin-top:4.5rem;padding-top:3rem;border-top:1px solid var(--border)}
+    .section-label{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:0.12em;
+      text-transform:uppercase;color:var(--faint);margin-bottom:0.65rem}
+    .section-title{font-family:'Cormorant Garant',serif;font-size:clamp(1.5rem,3vw,2.2rem);
+      font-weight:300;line-height:1.1;margin-bottom:1.25rem}
+    .section-title em{font-style:italic;color:var(--accent)}
+    .section-body{font-size:0.92rem;color:var(--muted);line-height:1.8;max-width:70ch}
+    .section-body + .section-body{margin-top:0.75rem}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:start;margin-top:1.5rem}
+
+    /* ─── DIAGRAM: SoC ARCHITECTURE ─── */
+    .arch-wrap{background:var(--bg2);border:1px solid var(--border2);padding:2rem 2rem 1.5rem;margin:2rem 0;overflow-x:auto}
+    .arch-header{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.12em;
+      text-transform:uppercase;color:var(--accent);margin-bottom:1.5rem;
+      border-bottom:1px solid rgba(74,122,90,0.25);padding-bottom:0.5rem}
+    .arch-svg{width:100%;min-width:640px}
+
+    /* ─── DIAGRAM: MLP NETWORK ─── */
+    .mlp-wrap{background:var(--bg2);border:1px solid var(--border2);padding:2rem;margin:2rem 0}
+    .mlp-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:center}
+    .mlp-svg-wrap{background:var(--bg3);border:1px solid var(--border);padding:1.5rem}
+    .feat-bar-list{display:flex;flex-direction:column;gap:0.5rem}
+    .feat-row{display:flex;align-items:center;gap:0.75rem;font-family:'IBM Plex Mono',monospace;font-size:0.63rem;color:var(--muted)}
+    .feat-rank{color:var(--faint);width:1.2rem;text-align:right;flex-shrink:0}
+    .feat-name{min-width:9rem;flex-shrink:0}
+    .feat-tag{font-size:0.55rem;padding:0.1rem 0.3rem;background:var(--accent-pale);
+      border:1px solid rgba(74,122,90,0.3);color:var(--accent);border-radius:1px;flex-shrink:0}
+    .feat-bar-bg{flex:1;height:5px;background:var(--bg3);border:1px solid var(--border)}
+    .feat-bar-fill{height:100%;background:var(--accent)}
+    .mlp-legend{margin-top:1rem;font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--faint);line-height:1.6}
+
+    /* ─── DIAGRAM: BCAST ─── */
+    .bcast-wrap{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border2);
+      border:1px solid var(--border2);margin:2rem 0}
+    .bcast-panel{background:var(--bg);padding:1.75rem 2rem}
+    .bcast-panel-label{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-bottom:0.75rem}
+    .bcast-panel-head{font-family:'Cormorant Garant',serif;font-size:1.15rem;font-weight:400;margin-bottom:1.25rem}
+    .bcast-panel.highlighted{background:rgba(74,122,90,0.06);border-left:2px solid var(--accent)}
+
+    /* cycles callout row */
+    .cycles-row{display:grid;grid-template-columns:1fr 1fr;gap:1px;
+      background:var(--border);border:1px solid var(--border);margin-top:1.5rem}
+    .cycles-cell{background:var(--bg);padding:1.25rem 1.5rem}
+    .cycles-v{font-family:'Cormorant Garant',serif;font-size:2rem;font-weight:300;line-height:1}
+    .cycles-v.good{color:var(--accent)}
+    .cycles-l{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-top:0.25rem}
+    .cycles-note{font-size:0.8rem;color:var(--muted);margin-top:0.4rem}
+
+    /* ─── DIAGRAM: POWER SCALING ─── */
+    .power-wrap{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border2);
+      border:1px solid var(--border2);margin:2rem 0}
+    .power-left{background:var(--bg);padding:1.75rem 2rem}
+    .power-right{background:var(--bg2);padding:1.75rem 2rem}
+    .power-table{width:100%;border-collapse:collapse;font-size:0.85rem}
+    .power-table th{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;
+      text-transform:uppercase;color:var(--faint);padding:0 0 0.6rem;text-align:left;font-weight:400;
+      border-bottom:1px solid var(--border2)}
+    .power-table td{padding:0.55rem 0;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:top}
+    .power-table td:last-child{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:0.82rem;color:var(--text)}
+    .power-table tr.highlight td{color:var(--text)}
+    .power-table tr.highlight td:last-child{color:var(--accent);font-weight:500}
+    .power-node-grid{display:flex;flex-direction:column;gap:1rem}
+    .power-node{display:flex;align-items:flex-start;gap:1rem}
+    .power-node-box{width:52px;height:38px;border:1px solid var(--border2);flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.04em;color:var(--muted)}
+    .power-node-box.target{border-color:var(--accent);color:var(--accent);background:var(--accent-pale)}
+    .power-node-info{}
+    .power-node-nm{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:0.06em;color:var(--faint)}
+    .power-node-val{font-family:'Cormorant Garant',serif;font-size:1.5rem;font-weight:300;line-height:1;margin-top:0.1rem}
+    .power-node-val.target{color:var(--accent)}
+    .power-node-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:0.55rem;
+      letter-spacing:0.08em;text-transform:uppercase;padding:0.15rem 0.4rem;
+      background:var(--accent-pale);border:1px solid rgba(74,122,90,0.3);color:var(--accent);
+      border-radius:1px;margin-top:0.2rem}
+
+    /* ─── DIAGRAM: BENCHMARK RESULTS ─── */
+    .bench-wrap{margin:2rem 0}
+    .bench-main{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border2);
+      border:1px solid var(--border2)}
+    .bench-cell{background:var(--bg);padding:1.75rem 2rem}
+    .bench-cell-label{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-bottom:0.85rem}
+    .bench-metrics{display:flex;flex-direction:column;gap:0.65rem}
+    .bench-metric-row{display:flex;justify-content:space-between;align-items:baseline;
+      padding-bottom:0.5rem;border-bottom:1px solid var(--border)}
+    .bench-metric-name{font-size:0.85rem;color:var(--muted)}
+    .bench-metric-val{font-family:'Cormorant Garant',serif;font-size:1.55rem;font-weight:300;line-height:1}
+    .bench-gap-badge{display:inline-flex;align-items:center;gap:0.35rem;
+      font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.06em;
+      padding:0.25rem 0.7rem;background:var(--accent-pale);
+      border:1px solid rgba(74,122,90,0.3);color:var(--accent);border-radius:1px;margin-top:1rem}
+    .bench-gap-badge::before{content:'●';font-size:0.5rem}
+    .bench-arch-table{width:100%;border-collapse:collapse;font-size:0.8rem}
+    .bench-arch-table th{font-family:'IBM Plex Mono',monospace;font-size:0.57rem;letter-spacing:0.06em;
+      text-transform:uppercase;color:var(--faint);padding:0 0 0.5rem;text-align:left;font-weight:400;
+      border-bottom:1px solid var(--border2)}
+    .bench-arch-table td{padding:0.4rem 0;border-bottom:1px solid var(--border);color:var(--muted);
+      font-family:'IBM Plex Mono',monospace;font-size:0.75rem;vertical-align:middle}
+    .bench-arch-table tr.chosen td{color:var(--text)}
+    .chosen-marker{display:inline-block;font-size:0.55rem;color:var(--accent);margin-left:0.3rem}
+
+    /* REVEAL */
+    .reveal{opacity:0;transform:translateY(12px);transition:opacity 0.6s ease,transform 0.6s ease}
+    .reveal.visible{opacity:1;transform:none}
+
+    /* FOOTER */
+    .proj-footer{border-top:1px solid var(--border);margin-top:5rem;padding-top:2rem;
+      display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+    .proj-footer p{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:0.07em;color:var(--faint)}
+
+    /* ANIMATIONS */
+    @keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+    /* RESPONSIVE */
+    @media(max-width:860px){
+      nav{padding:1rem 1.5rem}
+      .page{padding:6rem 1.5rem 4rem}
+      .stat-strip{grid-template-columns:repeat(3,1fr)}
+      .two-col,.mlp-grid,.bcast-wrap,.power-wrap,.bench-main{grid-template-columns:1fr}
+      .cycles-row{grid-template-columns:1fr 1fr}
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">Daniel Carrascoza</span>
+  <a href="index.html" class="nav-back">Back to portfolio</a>
+</nav>
+
+<div class="page">
+
+  <!-- ══ HERO ══ -->
+  <p class="proj-eyebrow">RTL Design &mdash; SoC / ML Co-design &mdash; Featured</p>
+  <h1 class="proj-title">Network Inline<br><em>Classification Engine</em></h1>
+  <p class="proj-sub">NetFPGA · Custom ISA · BF16 SIMD · 28 nm ASIC Projected</p>
+  <p class="proj-lead">
+    An inline ML intrusion-detection SoC implemented on a NetFPGA platform. Ingress packets are buffered on-die, flow features extracted by a DMA engine, and a BF16 neural network issues a binary verdict — all without the host CPU touching the data path. The design was validated at 82.4% accuracy on 22,544 KDDTest+ packets and projects to ~100 mW at 28 nm ASIC.
+  </p>
+  <div class="tags-row">
+    <span class="tag tag-a">NetFPGA</span><span class="tag tag-a">Verilog</span>
+    <span class="tag tag-a">CUDA / PTX</span><span class="tag tag-a">SystemVerilog</span>
+    <span class="tag">Custom ISA</span><span class="tag">BF16 SIMD</span>
+    <span class="tag">Python</span><span class="tag">RTL Verification</span><span class="tag">Linux</span>
+  </div>
+  <div class="proj-actions">
+    <a href="https://github.com/danielcarrascoza/network-ids-soc" class="btn btn-fill" target="_blank" rel="noopener">View on GitHub →</a>
+    <a href="index.html" class="btn btn-line">← All projects</a>
+  </div>
+
+  <!-- STAT STRIP -->
+  <div class="stat-strip">
+    <div class="stat-cell"><div class="stat-v">82.4%</div><div class="stat-l">Accuracy</div></div>
+    <div class="stat-cell"><div class="stat-v">0.848</div><div class="stat-l">F1 Score</div></div>
+    <div class="stat-cell"><div class="stat-v">0.864</div><div class="stat-l">Attack Recall</div></div>
+    <div class="stat-cell"><div class="stat-v">3.28×</div><div class="stat-l">SIMD Speedup</div></div>
+    <div class="stat-cell"><div class="stat-v">~100 mW</div><div class="stat-l">ASIC @ 28 nm</div></div>
+  </div>
+
+
+  <!-- ══ SECTION 1 — ARCHITECTURE ══ -->
+  <div class="section reveal">
+    <p class="section-label">01 — System Architecture</p>
+    <h2 class="section-title">Single-die data &amp; <em>control planes</em></h2>
+    <p class="section-body">
+      The SoC is partitioned into two non-intersecting planes. The <strong>data plane</strong> handles every ingress byte: packets arrive at the 256×72 BRAM convertible FIFO, the DMA engine streams extracted flow features at 1 word/cycle into the SIMD coprocessor, and the verdict gates egress — the host ARM core never touches this path.
+    </p>
+    <p class="section-body" style="margin-top:0.75rem">
+      The <strong>control plane</strong> runs a 4-thread ARM-style CPU that polls FIFO status, configures DMA addresses, starts the kernel, and polls completion — pure orchestration. The coprocessor itself runs a CUDA-compatible custom ISA over a 4-lane BF16 + INT16 SIMD unit.
+    </p>
+
+    <!-- ARCHITECTURE SVG -->
+    <div class="arch-wrap" style="margin-top:1.75rem">
+      <div class="arch-header">SINGLE DIE — VIRTEX-II PRO FPGA TODAY · 28 nm ASIC PROJECTED</div>
+      <svg class="arch-svg" viewBox="0 0 820 310" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arr" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <polygon points="0,0 7,3.5 0,7" fill="#6b6456"/>
+          </marker>
+          <marker id="arr-a" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <polygon points="0,0 7,3.5 0,7" fill="#4a7a5a"/>
+          </marker>
+          <marker id="arr-dash" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+            <polygon points="0,0 7,3.5 0,7" fill="#a39887"/>
+          </marker>
+        </defs>
+
+        <!-- outer die border -->
+        <rect x="2" y="2" width="816" height="306" rx="2" stroke="#b8860b" stroke-width="1.2" fill="none"/>
+
+        <!-- PLANE LABELS -->
+        <text x="18" y="178" font-family="IBM Plex Mono,monospace" font-size="9" fill="#a39887" letter-spacing="1" text-anchor="start">DATA PLANE ↑</text>
+        <text x="18" y="194" font-family="IBM Plex Mono,monospace" font-size="9" fill="#a39887" letter-spacing="1" text-anchor="start">CONTROL PLANE ↓</text>
+        <!-- divider -->
+        <line x1="18" y1="200" x2="802" y2="200" stroke="rgba(90,70,50,0.18)" stroke-width="0.8" stroke-dasharray="4 4"/>
+
+        <!-- ── INGRESS / EGRESS labels ── -->
+        <text x="28" y="90" font-family="IBM Plex Mono,monospace" font-size="9" fill="#6b6456">ingress</text>
+        <text x="28" y="100" font-family="IBM Plex Mono,monospace" font-size="9" fill="#6b6456">packet</text>
+        <line x1="28" y1="105" x2="28" y2="118" stroke="#6b6456" stroke-width="0.8"/>
+        <line x1="28" y1="118" x2="168" y2="118" stroke="#6b6456" stroke-width="1" marker-end="url(#arr)"/>
+
+        <text x="28" y="155" font-family="IBM Plex Mono,monospace" font-size="9" fill="#6b6456">egress</text>
+        <text x="28" y="165" font-family="IBM Plex Mono,monospace" font-size="9" fill="#6b6456">packet</text>
+        <line x1="168" y1="158" x2="50" y2="158" stroke="#6b6456" stroke-width="1" marker-end="url(#arr)"/>
+
+        <!-- ── BRAM FIFO block ── -->
+        <rect x="168" y="98" width="168" height="80" rx="1" fill="#ede7dc" stroke="rgba(90,70,50,0.3)" stroke-width="1"/>
+        <text x="178" y="116" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887" letter-spacing="0.8">CONVERTIBLE FIFO</text>
+        <text x="178" y="136" font-family="Cormorant Garant,serif" font-size="15" font-weight="400" fill="#1c1b18">256 × 72 BRAM</text>
+        <text x="178" y="152" font-family="IBM Plex Mono,monospace" font-size="8" fill="#6b6456">one-packet buffer</text>
+        <text x="178" y="170" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887">1 word / cycle out</text>
+
+        <!-- FIFO → DMA arrow: flow features -->
+        <line x1="336" y1="118" x2="400" y2="118" stroke="#4a7a5a" stroke-width="1" marker-end="url(#arr-a)"/>
+        <text x="338" y="111" font-family="IBM Plex Mono,monospace" font-size="8" fill="#4a7a5a">flow features</text>
+
+        <!-- verdict arrow DMA → FIFO -->
+        <line x1="400" y1="158" x2="336" y2="158" stroke="#6b6456" stroke-width="1" marker-end="url(#arr)"/>
+        <text x="338" y="172" font-family="IBM Plex Mono,monospace" font-size="8" fill="#6b6456">verdict</text>
+
+        <!-- ── DMA ENGINE block ── -->
+        <rect x="400" y="98" width="130" height="80" rx="1" fill="#ede7dc" stroke="rgba(90,70,50,0.3)" stroke-width="1"/>
+        <text x="410" y="116" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887" letter-spacing="0.8">DMA ENGINE</text>
+        <text x="410" y="138" font-family="Cormorant Garant,serif" font-size="18" font-weight="300" fill="#1c1b18">DMA</text>
+        <text x="410" y="155" font-family="IBM Plex Mono,monospace" font-size="8" fill="#6b6456">1 word / cycle</text>
+
+        <!-- DMA → SIMD arrow -->
+        <line x1="530" y1="118" x2="574" y2="118" stroke="#4a7a5a" stroke-width="1" marker-end="url(#arr-a)"/>
+        <!-- SIMD → DMA verdict -->
+        <line x1="574" y1="158" x2="530" y2="158" stroke="#6b6456" stroke-width="1" marker-end="url(#arr)"/>
+
+        <!-- ── SIMD / GPU COPROCESSOR block ── -->
+        <rect x="574" y="82" width="224" height="100" rx="1" fill="rgba(74,122,90,0.12)" stroke="#4a7a5a" stroke-width="1.4"/>
+        <text x="584" y="100" font-family="IBM Plex Mono,monospace" font-size="8" fill="#4a7a5a" letter-spacing="0.8">SIMD GPU · COPROCESSOR</text>
+        <text x="584" y="121" font-family="Cormorant Garant,serif" font-size="16" font-weight="400" fill="#1c1b18">4 lanes · BF16 + INT16</text>
+        <text x="584" y="138" font-family="IBM Plex Mono,monospace" font-size="8" fill="#6b6456">CUDA-compatible custom ISA</text>
+        <text x="584" y="151" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887">packet bytes never touch ARM</text>
+        <!-- lane boxes -->
+        <rect x="584" y="158" width="38" height="16" rx="1" fill="#4a7a5a" opacity="0.35"/>
+        <rect x="628" y="158" width="38" height="16" rx="1" fill="#4a7a5a" opacity="0.35"/>
+        <rect x="672" y="158" width="38" height="16" rx="1" fill="#4a7a5a" opacity="0.35"/>
+        <rect x="716" y="158" width="38" height="16" rx="1" fill="#4a7a5a" opacity="0.35"/>
+        <text x="786" y="168" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4a7a5a">×4</text>
+
+        <!-- ── CONTROL PLANE ── -->
+        <!-- dashed verticals -->
+        <line x1="252" y1="200" x2="252" y2="238" stroke="#a39887" stroke-width="0.8" stroke-dasharray="3 3" marker-end="url(#arr-dash)"/>
+        <line x1="465" y1="200" x2="465" y2="238" stroke="#a39887" stroke-width="0.8" stroke-dasharray="3 3" marker-end="url(#arr-dash)"/>
+        <line x1="686" y1="200" x2="686" y2="238" stroke="#a39887" stroke-width="0.8" stroke-dasharray="3 3" marker-end="url(#arr-dash)"/>
+
+        <!-- CPU orchestrator box -->
+        <rect x="100" y="238" width="690" height="56" rx="1" fill="#f7f4ef" stroke="rgba(90,70,50,0.22)" stroke-width="1" stroke-dasharray="5 3"/>
+        <text x="115" y="256" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887" letter-spacing="0.8">ARM CPU · ORCHESTRATOR</text>
+        <text x="115" y="273" font-family="Cormorant Garant,serif" font-size="13" font-weight="400" fill="#1c1b18">4-thread · polls status, dispatches DMA, releases GPU</text>
+        <text x="115" y="286" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887">never on the data path</text>
+
+        <!-- ctrl annotations -->
+        <text x="175" y="232" font-family="IBM Plex Mono,monospace" font-size="7.5" fill="#a39887">poll FIFO_STATUS · set FIFO_MODE</text>
+        <text x="400" y="232" font-family="IBM Plex Mono,monospace" font-size="7.5" fill="#a39887">configure addr+len · start</text>
+        <text x="608" y="232" font-family="IBM Plex Mono,monospace" font-size="7.5" fill="#a39887">release · poll kernel_done</text>
+      </svg>
+    </div>
+
+    <!-- RTL validation note -->
+    <p class="section-body" style="margin-top:1rem">
+      35 RTL test cases were validated across IP block, pipeline, and system integration levels using waveform debugging and hardware characterization workflows.
+    </p>
+  </div>
+
+
+  <!-- ══ SECTION 2 — ML MODEL ══ -->
+  <div class="section reveal">
+    <p class="section-label">02 — ML Model</p>
+    <h2 class="section-title">What actually <em>runs on silicon</em></h2>
+    <p class="section-body">
+      A 4-layer ReLU MLP (11 → 16 → 8 → 2) trained on KDDTrain+ (125,973 samples) with label smoothing 0.1. Inputs are the top-11 RF-importance-ranked flow features from 41 NSL-KDD attributes — mostly byte counts, service rates, and protocol flags. BF16 inference runs on-chip; label smoothing 0.1 was the single change that unlocked generalization on KDDTest+.
+    </p>
+
+    <div class="mlp-grid" style="margin-top:1.75rem">
+      <!-- MLP diagram -->
+      <div class="mlp-svg-wrap">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);margin-bottom:1rem">4-Layer ReLU MLP · 11 → 16 → 8 → 2</div>
+        <svg viewBox="0 0 340 260" width="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- layer columns: x = 30, 120, 210, 290 -->
+          <!-- INPUT: 11 nodes -->
+          <text x="30" y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#4a7a5a" text-anchor="middle">11 inputs</text>
+          <!-- draw 11 nodes compressed -->
+          <circle cx="30" cy="30"  r="5" fill="#4a7a5a" opacity="0.8"/>
+          <circle cx="30" cy="48"  r="5" fill="#4a7a5a" opacity="0.8"/>
+          <circle cx="30" cy="66"  r="5" fill="#4a7a5a" opacity="0.8"/>
+          <circle cx="30" cy="84"  r="5" fill="#4a7a5a" opacity="0.7"/>
+          <circle cx="30" cy="102" r="5" fill="#4a7a5a" opacity="0.6"/>
+          <circle cx="30" cy="120" r="5" fill="#4a7a5a" opacity="0.6"/>
+          <circle cx="30" cy="138" r="5" fill="#4a7a5a" opacity="0.5"/>
+          <circle cx="30" cy="156" r="5" fill="#4a7a5a" opacity="0.5"/>
+          <circle cx="30" cy="174" r="5" fill="#4a7a5a" opacity="0.4"/>
+          <circle cx="30" cy="192" r="5" fill="#4a7a5a" opacity="0.4"/>
+          <circle cx="30" cy="210" r="5" fill="#4a7a5a" opacity="0.35"/>
+
+          <!-- connections input→L1 (sparse for clarity) -->
+          <g stroke="#4a7a5a" stroke-width="0.4" opacity="0.18">
+            <line x1="35" y1="30"  x2="115" y2="45"/><line x1="35" y1="30"  x2="115" y2="75"/>
+            <line x1="35" y1="66"  x2="115" y2="60"/><line x1="35" y1="66"  x2="115" y2="90"/>
+            <line x1="35" y1="102" x2="115" y2="105"/><line x1="35" y1="120" x2="115" y2="120"/>
+            <line x1="35" y1="138" x2="115" y2="135"/><line x1="35" y1="174" x2="115" y2="165"/>
+            <line x1="35" y1="192" x2="115" y2="180"/><line x1="35" y1="210" x2="115" y2="195"/>
+            <line x1="35" y1="48"  x2="115" y2="30"/><line x1="35" y1="84"  x2="115" y2="60"/>
+            <line x1="35" y1="156" x2="115" y2="150"/>
+          </g>
+
+          <!-- L1: 16 nodes -->
+          <text x="120" y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#6b6456" text-anchor="middle">16 ReLU</text>
+          <g fill="#e3dbd0" stroke="rgba(90,70,50,0.4)" stroke-width="0.8">
+            <circle cx="120" cy="25" r="4.5"/><circle cx="120" cy="40" r="4.5"/>
+            <circle cx="120" cy="55" r="4.5"/><circle cx="120" cy="70" r="4.5"/>
+            <circle cx="120" cy="85" r="4.5"/><circle cx="120" cy="100" r="4.5"/>
+            <circle cx="120" cy="115" r="4.5"/><circle cx="120" cy="130" r="4.5"/>
+            <circle cx="120" cy="145" r="4.5"/><circle cx="120" cy="160" r="4.5"/>
+            <circle cx="120" cy="175" r="4.5"/><circle cx="120" cy="190" r="4.5"/>
+            <circle cx="120" cy="205" r="4.5"/><circle cx="120" cy="220" r="4.5"/>
+            <circle cx="120" cy="235" r="4.5"/><circle cx="120" cy="250" r="4.5"/>
+          </g>
+
+          <!-- connections L1→L2 -->
+          <g stroke="#a39887" stroke-width="0.35" opacity="0.22">
+            <line x1="125" y1="40"  x2="205" y2="70"/><line x1="125" y1="70"  x2="205" y2="90"/>
+            <line x1="125" y1="100" x2="205" y2="110"/><line x1="125" y1="130" x2="205" y2="130"/>
+            <line x1="125" y1="160" x2="205" y2="150"/><line x1="125" y1="190" x2="205" y2="170"/>
+            <line x1="125" y1="25"  x2="205" y2="50"/><line x1="125" y1="55"  x2="205" y2="70"/>
+            <line x1="125" y1="85"  x2="205" y2="90"/><line x1="125" y1="205" x2="205" y2="170"/>
+            <line x1="125" y1="220" x2="205" y2="190"/><line x1="125" y1="115" x2="205" y2="110"/>
+          </g>
+
+          <!-- L2: 8 nodes -->
+          <text x="210" y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#6b6456" text-anchor="middle">8 ReLU</text>
+          <g fill="#e3dbd0" stroke="rgba(90,70,50,0.4)" stroke-width="0.8">
+            <circle cx="210" cy="46"  r="5"/><circle cx="210" cy="70"  r="5"/>
+            <circle cx="210" cy="94"  r="5"/><circle cx="210" cy="118" r="5"/>
+            <circle cx="210" cy="142" r="5"/><circle cx="210" cy="166" r="5"/>
+            <circle cx="210" cy="190" r="5"/><circle cx="210" cy="214" r="5"/>
+          </g>
+
+          <!-- connections L2→output -->
+          <g stroke="#a39887" stroke-width="0.5" opacity="0.3">
+            <line x1="215" y1="46"  x2="282" y2="105"/>
+            <line x1="215" y1="70"  x2="282" y2="105"/>
+            <line x1="215" y1="94"  x2="282" y2="105"/>
+            <line x1="215" y1="118" x2="282" y2="105"/>
+            <line x1="215" y1="142" x2="282" y2="155"/>
+            <line x1="215" y1="166" x2="282" y2="155"/>
+            <line x1="215" y1="190" x2="282" y2="155"/>
+            <line x1="215" y1="214" x2="282" y2="155"/>
+          </g>
+
+          <!-- Output: 2 nodes -->
+          <text x="287" y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#6b6456" text-anchor="middle">2 out</text>
+          <circle cx="287" cy="105" r="7" fill="#4a7a5a" opacity="0.5" stroke="#4a7a5a" stroke-width="1"/>
+          <circle cx="287" cy="155" r="7" fill="#e3dbd0" stroke="rgba(90,70,50,0.4)" stroke-width="1"/>
+          <text x="298" y="108" font-family="IBM Plex Mono,monospace" font-size="7.5" fill="#4a7a5a">attack</text>
+          <text x="298" y="158" font-family="IBM Plex Mono,monospace" font-size="7.5" fill="#6b6456">normal</text>
+
+          <!-- BF16 label -->
+          <text x="170" y="260" font-family="IBM Plex Mono,monospace" font-size="7.5" fill="#a39887" text-anchor="middle">BF16 inference · label-smoothing 0.1</text>
+        </svg>
+      </div>
+
+      <!-- Feature importance bars -->
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);margin-bottom:0.85rem">Random Forest Feature Importance · Top 11 of 41</div>
+        <div class="feat-bar-list">
+          <div class="feat-row"><span class="feat-rank">1</span><span class="feat-name">dst_bytes</span><span class="feat-tag">log</span><div class="feat-bar-bg"><div class="feat-bar-fill" style="width:100%"></div></div></div>
+          <div class="feat-row"><span class="feat-rank">2</span><span class="feat-name">src_bytes</span><span class="feat-tag">log</span><div class="feat-bar-bg"><div class="feat-bar-fill" style="width:91%"></div></div></div>
+          <div class="feat-row"><span class="feat-rank">3</span><span class="feat-name">flag</span><span style="font-size:0.55rem;color:var(--faint)">cat</span><div class="feat-bar-bg"><div class="feat-bar-fill" style="width:78%"></div></div></div>
+          <div class="feat-row"><span class="feat-rank">4</span><span class="feat-name">same_srv_rate</span><span class="feat-tag" style="opacity:0"></span><div class="feat-bar-bg"><div class="feat-bar-fill" style="width:66%"></div></div></div>
+          <div class="feat-row"><span class="feat-rank">5</span><span class="feat-name">diff_srv_rate</span><span class="feat-tag" style="opacity:0"></span><div class="feat-bar-bg"><div class="feat-bar-fill" style="width:56%"></div></div></div>
+          <div class="feat-row"><span class="feat-rank">6</span><span class="feat-name">dst_host_srv_count</span><span class="feat-tag">log</span><div class="feat-bar-bg"><div class="feat-bar-fill" style="width:46%"></div></div></div>
+          <div class="feat-row"><span class="feat-rank">7</span><span class="feat-name">dst_host_same_srv</span><span class="feat-tag" style="opacity:0"></span><div class="feat-bar-bg"><div class="feat-bar-fill" style="width:40%"></div></div></div>
+          <div class="feat-row"><span class="feat-rank">8</span><span class="feat-name">logged_in</span><span style="font-size:0.55rem;color:var(--faint)">bool</span><div class="feat-bar-bg"><div class="feat-bar-fill" style="width:34%"></div></div></div>
+          <div class="feat-row"><span class="feat-rank">9</span><span class="feat-name">protocol_type</span><span style="font-size:0.55rem;color:var(--faint)">cat</span><div class="feat-bar-bg"><div class="feat-bar-fill" style="width:27%"></div></div></div>
+          <div class="feat-row"><span class="feat-rank">10</span><span class="feat-name">count</span><span class="feat-tag">log</span><div class="feat-bar-bg"><div class="feat-bar-fill" style="width:20%"></div></div></div>
+          <div class="feat-row"><span class="feat-rank">11</span><span class="feat-name">service</span><span style="font-size:0.55rem;color:var(--faint)">cat</span><div class="feat-bar-bg"><div class="feat-bar-fill" style="width:15%"></div></div></div>
+        </div>
+        <div class="mlp-legend" style="margin-top:1rem">
+          tail · 30 features · not used &nbsp;·&nbsp; rf_seed = 42 · NSL-KDD
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══ SECTION 3 — BCAST ══ -->
+  <div class="section reveal">
+    <p class="section-label">03 — BCAST Instruction</p>
+    <h2 class="section-title">Cross-lane SIMD in <em>one cycle</em></h2>
+    <p class="section-body">
+      Without a cross-lane broadcast, reducing across 4 SIMD lanes requires N serial passes through the register file — 4 sequential cycles for 4 lanes. The BCAST instruction solves this: one instruction broadcasts a value across all lanes simultaneously in a single cycle. Measured using on-chip PCI cycle counters across 5/5 silicon runs, the speedup is a consistent 3.28×.
+    </p>
+
+    <div class="bcast-wrap" style="margin-top:1.75rem">
+      <!-- WITHOUT -->
+      <div class="bcast-panel">
+        <div class="bcast-panel-label">Without BCAST</div>
+        <div class="bcast-panel-head">Scalar fallback — N serial passes</div>
+        <svg viewBox="0 0 280 190" width="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- lane labels -->
+          <text x="32"  y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887" text-anchor="middle">lane 0</text>
+          <text x="96"  y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887" text-anchor="middle">lane 1</text>
+          <text x="160" y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887" text-anchor="middle">lane 2</text>
+          <text x="224" y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887" text-anchor="middle">lane 3</text>
+          <!-- register rows per lane -->
+          <g fill="#e3dbd0" stroke="rgba(90,70,50,0.3)" stroke-width="0.8">
+            <!-- lane 0 -->
+            <rect x="8"   y="20" width="48" height="20" rx="1"/><rect x="8"   y="44" width="48" height="20" rx="1"/>
+            <rect x="8"   y="68" width="48" height="20" rx="1"/><rect x="8"   y="92" width="48" height="20" rx="1"/>
+            <!-- lane 1 -->
+            <rect x="72"  y="20" width="48" height="20" rx="1"/><rect x="72"  y="44" width="48" height="20" rx="1"/>
+            <rect x="72"  y="68" width="48" height="20" rx="1"/><rect x="72"  y="92" width="48" height="20" rx="1"/>
+            <!-- lane 2 -->
+            <rect x="136" y="20" width="48" height="20" rx="1"/><rect x="136" y="44" width="48" height="20" rx="1"/>
+            <rect x="136" y="68" width="48" height="20" rx="1"/><rect x="136" y="92" width="48" height="20" rx="1"/>
+            <!-- lane 3 -->
+            <rect x="200" y="20" width="48" height="20" rx="1"/><rect x="200" y="44" width="48" height="20" rx="1"/>
+            <rect x="200" y="68" width="48" height="20" rx="1"/><rect x="200" y="92" width="48" height="20" rx="1"/>
+          </g>
+          <!-- arrows down to scratch reg -->
+          <g stroke="#a39887" stroke-width="0.8">
+            <line x1="32"  y1="112" x2="32"  y2="130"/><line x1="96"  y1="112" x2="96"  y2="130"/>
+            <line x1="160" y1="112" x2="160" y2="130"/><line x1="224" y1="112" x2="224" y2="130"/>
+            <!-- converge -->
+            <line x1="32"  y1="130" x2="140" y2="148"/>
+            <line x1="96"  y1="130" x2="140" y2="148"/>
+            <line x1="160" y1="130" x2="140" y2="148"/>
+            <line x1="224" y1="130" x2="140" y2="148"/>
+          </g>
+          <!-- scratch reg -->
+          <rect x="100" y="148" width="80" height="22" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.35)" stroke-width="0.8"/>
+          <text x="140" y="163" font-family="IBM Plex Mono,monospace" font-size="8" fill="#6b6456" text-anchor="middle">scratch reg</text>
+          <text x="140" y="184" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887" text-anchor="middle">4 sequential cycles to reduce</text>
+        </svg>
+      </div>
+
+      <!-- WITH -->
+      <div class="bcast-panel highlighted">
+        <div class="bcast-panel-label">With BCAST</div>
+        <div class="bcast-panel-head">One instruction · one cycle</div>
+        <svg viewBox="0 0 280 190" width="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr-b" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <polygon points="0,0 7,3.5 0,7" fill="#4a7a5a"/>
+            </marker>
+          </defs>
+          <text x="32"  y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#4a7a5a" text-anchor="middle">lane 0</text>
+          <text x="96"  y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887" text-anchor="middle">lane 1</text>
+          <text x="160" y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887" text-anchor="middle">lane 2</text>
+          <text x="224" y="14" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a39887" text-anchor="middle">lane 3</text>
+          <!-- register rows — lane 0 highlighted -->
+          <g stroke-width="0.8">
+            <rect x="8"   y="20" width="48" height="20" rx="1" fill="rgba(74,122,90,0.18)" stroke="#4a7a5a"/>
+            <rect x="8"   y="44" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+            <rect x="8"   y="68" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+            <rect x="8"   y="92" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+            <rect x="72"  y="20" width="48" height="20" rx="1" fill="rgba(74,122,90,0.18)" stroke="#4a7a5a"/>
+            <rect x="72"  y="44" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+            <rect x="72"  y="68" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+            <rect x="72"  y="92" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+            <rect x="136" y="20" width="48" height="20" rx="1" fill="rgba(74,122,90,0.18)" stroke="#4a7a5a"/>
+            <rect x="136" y="44" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+            <rect x="136" y="68" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+            <rect x="136" y="92" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+            <rect x="200" y="20" width="48" height="20" rx="1" fill="rgba(74,122,90,0.18)" stroke="#4a7a5a"/>
+            <rect x="200" y="44" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+            <rect x="200" y="68" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+            <rect x="200" y="92" width="48" height="20" rx="1" fill="#e3dbd0" stroke="rgba(90,70,50,0.3)"/>
+          </g>
+          <!-- BCAST arrow across top row -->
+          <line x1="56" y1="30" x2="246" y2="30" stroke="#4a7a5a" stroke-width="1.4" marker-end="url(#arr-b)"/>
+          <text x="140" y="22" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4a7a5a" text-anchor="middle" font-weight="500">BCAST</text>
+          <text x="140" y="184" font-family="IBM Plex Mono,monospace" font-size="8" fill="#4a7a5a" text-anchor="middle">1 instruction · 1 cycle</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Cycle count callout -->
+    <div class="cycles-row">
+      <div class="cycles-cell">
+        <div class="cycles-v">2,402</div>
+        <div class="cycles-l">Scalar Baseline (cycles)</div>
+        <div class="cycles-note">19.22 µs @ 125 MHz · 6.41 ms wallclk</div>
+      </div>
+      <div class="cycles-cell">
+        <div class="cycles-v good">732</div>
+        <div class="cycles-l">With BCAST (cycles)</div>
+        <div class="cycles-note">5.86 µs @ 125 MHz · 3.61 ms wallclk · <strong style="color:var(--accent)">3.28× speedup</strong> · 5/5 silicon runs identical</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══ SECTION 4 — BENCHMARK RESULTS ══ -->
+  <div class="section reveal">
+    <p class="section-label">04 — Benchmark Results</p>
+    <h2 class="section-title">Silicon vs. dev — <em>±0.01 logit gap</em></h2>
+    <p class="section-body">
+      Full benchmark on NSL-KDD KDDTest+ (22,544 packets). Architecture search showed the 11-16-8-2 config with silicon-deployed weights achieves the smallest train/test gap. The live FPGA demo on the team-7 board (n=500 packets) matched dev inference within ±0.01 logit — silicon-faithful BF16 forward pass confirmed.
+    </p>
+
+    <div class="bench-wrap" style="margin-top:1.75rem">
+      <div class="bench-main">
+        <!-- Full benchmark -->
+        <div class="bench-cell">
+          <div class="bench-cell-label">Full benchmark · KDDTest+ · n = 22,544 packets</div>
+          <div class="bench-metrics">
+            <div class="bench-metric-row">
+              <span class="bench-metric-name">Accuracy</span>
+              <span class="bench-metric-val">82.4%</span>
+            </div>
+            <div class="bench-metric-row">
+              <span class="bench-metric-name">F1 Score (attack)</span>
+              <span class="bench-metric-val">0.848</span>
+            </div>
+            <div class="bench-metric-row">
+              <span class="bench-metric-name">Attack Recall</span>
+              <span class="bench-metric-val">0.864</span>
+            </div>
+            <div class="bench-metric-row">
+              <span class="bench-metric-name">Attack Precision</span>
+              <span class="bench-metric-val">0.833</span>
+            </div>
+          </div>
+          <div class="bench-gap-badge">Silicon-deployed weights · smallest train/test gap</div>
+
+          <!-- architecture comparison table -->
+          <div style="margin-top:1.5rem">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);margin-bottom:0.6rem">Architecture comparison · KDDTest+ accuracy</div>
+            <table class="bench-arch-table">
+              <thead>
+                <tr><th>Architecture</th><th>Params</th><th>KDDTest+</th></tr>
+              </thead>
+              <tbody>
+                <tr class="chosen">
+                  <td>11-16-8-2 <span class="chosen-marker">★</span></td>
+                  <td>346</td>
+                  <td style="color:var(--accent)">0.8239</td>
+                </tr>
+                <tr>
+                  <td>25-32-32-16-2</td>
+                  <td>2,722</td>
+                  <td>0.8061</td>
+                </tr>
+                <tr>
+                  <td>25-32-32-16-2 (SGD)</td>
+                  <td>2,722</td>
+                  <td>0.7906</td>
+                </tr>
+                <tr>
+                  <td>25-32-32-16-2 (LS 0.1)</td>
+                  <td>2,722</td>
+                  <td>0.7791</td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--faint);margin-top:0.5rem">★ = silicon-deployed weights · rf-seed=42, cosine LR, batch=256</div>
+          </div>
+        </div>
+
+        <!-- FPGA Live Demo -->
+        <div class="bench-cell" style="background:var(--bg2)">
+          <div class="bench-cell-label">FPGA Live Demo · team-7 board · n = 500 packets</div>
+          <div class="bench-metrics">
+            <div class="bench-metric-row">
+              <span class="bench-metric-name">Accuracy</span>
+              <span class="bench-metric-val">82.2% <span style="font-size:1rem;color:var(--faint)">(411/500)</span></span>
+            </div>
+            <div class="bench-metric-row">
+              <span class="bench-metric-name">Attack Recall</span>
+              <span class="bench-metric-val">88.0% <span style="font-size:1rem;color:var(--faint)">(220/250)</span></span>
+            </div>
+            <div class="bench-metric-row">
+              <span class="bench-metric-name">Latency</span>
+              <span class="bench-metric-val">~7 ms/pkt</span>
+            </div>
+            <div class="bench-metric-row">
+              <span class="bench-metric-name">Silicon vs. dev</span>
+              <span class="bench-metric-val" style="color:var(--accent)">±0.01 logit</span>
+            </div>
+          </div>
+
+          <!-- confusion matrix mini -->
+          <div style="margin-top:1.5rem">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);margin-bottom:0.6rem">Confusion Matrix · n=500</div>
+            <table style="width:100%;border-collapse:collapse;font-size:0.82rem;font-family:'IBM Plex Mono',monospace">
+              <thead>
+                <tr>
+                  <th style="font-weight:400;color:var(--faint);padding:0.3rem 0.5rem;border:1px solid var(--border2);font-size:0.65rem"></th>
+                  <th style="font-weight:400;color:var(--faint);padding:0.3rem 0.5rem;border:1px solid var(--border2);font-size:0.65rem">Pred Normal</th>
+                  <th style="font-weight:400;color:var(--faint);padding:0.3rem 0.5rem;border:1px solid var(--border2);font-size:0.65rem">Pred Attack</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding:0.3rem 0.5rem;border:1px solid var(--border2);color:var(--muted);font-size:0.7rem">Actual Normal</td>
+                  <td style="padding:0.3rem 0.5rem;border:1px solid var(--border2);text-align:center;color:var(--accent);font-weight:500">191</td>
+                  <td style="padding:0.3rem 0.5rem;border:1px solid var(--border2);text-align:center;color:var(--muted)">59</td>
+                </tr>
+                <tr>
+                  <td style="padding:0.3rem 0.5rem;border:1px solid var(--border2);color:var(--muted);font-size:0.7rem">Actual Attack</td>
+                  <td style="padding:0.3rem 0.5rem;border:1px solid var(--border2);text-align:center;color:var(--muted)">30</td>
+                  <td style="padding:0.3rem 0.5rem;border:1px solid var(--border2);text-align:center;color:var(--accent);font-weight:500">220</td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="display:flex;gap:1.5rem;margin-top:0.6rem">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--faint)">Precision (attack): <span style="color:var(--text)">78.9%</span></div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--faint)">Recall (attack): <span style="color:var(--text)">88.0%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══ SECTION 5 — POWER ══ -->
+  <div class="section reveal">
+    <p class="section-label">05 — Power Analysis</p>
+    <h2 class="section-title">FPGA measured · <em>ASIC projected</em></h2>
+    <p class="section-body">
+      Xilinx XPower measured total chip power at 2,674 mW on the 90 nm NetFPGA. Using Kuon &amp; Rose TCAD '07 scaling with a +6 dynamic gap adjustment for BRAM/mult-blended logic, the 28 nm ASIC projection lands at ~90–110 mW — three process generations of V²+C reduction. 7 nm projects a further 2–3× reduction to ~30–50 mW.
+    </p>
+
+    <div class="power-wrap" style="margin-top:1.75rem">
+      <!-- left: measured breakdown table -->
+      <div class="power-left">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);margin-bottom:0.85rem">Measured · Xilinx XPower · 2026-04-26</div>
+        <table class="power-table">
+          <thead>
+            <tr><th>Component</th><th style="text-align:right">Power</th></tr>
+          </thead>
+          <tbody>
+            <tr class="highlight"><td>Total full chip</td><td>2,674 mW</td></tr>
+            <tr><td style="padding-left:1rem;font-size:0.82rem">Quiescent (static)</td><td>159 mW</td></tr>
+            <tr><td style="padding-left:1rem;font-size:0.82rem">Dynamic clocks</td><td>817 mW</td></tr>
+            <tr><td style="padding-left:1rem;font-size:0.82rem">Dynamic logic</td><td>729 mW</td></tr>
+            <tr><td style="padding-left:1rem;font-size:0.82rem">Dynamic signals</td><td>678 mW</td></tr>
+            <tr><td style="padding-left:1rem;font-size:0.82rem">Dynamic IOs</td><td>292 mW</td></tr>
+          </tbody>
+        </table>
+
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);margin:1.25rem 0 0.6rem">Projected · Kuon &amp; Rose TCAD '07 + scaling</div>
+        <table class="power-table">
+          <tbody>
+            <tr><td>90 nm FPGA (measured)</td><td>2,674 mW</td></tr>
+            <tr><td>90 nm ASIC (projected)<br><span style="font-size:0.75rem;color:var(--faint)">+6 dynamic gap, BRAM/mult-blended</span></td><td>~430 mW</td></tr>
+            <tr class="highlight"><td style="color:var(--accent)">28 nm ASIC (projected)<br><span style="font-size:0.75rem;color:var(--muted)">3 process generations · ~5× V²+C</span></td><td style="color:var(--accent)">~90–110 mW</td></tr>
+            <tr><td>7 nm ASIC (projected)<br><span style="font-size:0.75rem;color:var(--faint)">further ~2–3× scaling</span></td><td>~30–50 mW</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- right: node scaling diagram -->
+      <div class="power-right">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--faint);margin-bottom:1.25rem">Process-node scaling</div>
+        <div class="power-node-grid">
+          <div class="power-node">
+            <div class="power-node-box">FPGA</div>
+            <div class="power-node-info">
+              <div class="power-node-nm">90 nm FPGA, today</div>
+              <div class="power-node-val">2.67 W</div>
+            </div>
+          </div>
+          <div class="power-node">
+            <div class="power-node-box">ASIC</div>
+            <div class="power-node-info">
+              <div class="power-node-nm">90 nm ASIC, proj.</div>
+              <div class="power-node-val">~430 mW</div>
+            </div>
+          </div>
+          <div class="power-node">
+            <div class="power-node-box target">ASIC</div>
+            <div class="power-node-info">
+              <div class="power-node-nm">28 nm ASIC, proj.</div>
+              <div class="power-node-val target">~100 mW</div>
+              <div class="power-node-badge">Target Node</div>
+            </div>
+          </div>
+          <div class="power-node">
+            <div class="power-node-box">ASIC</div>
+            <div class="power-node-info">
+              <div class="power-node-nm">7 nm ASIC, proj.</div>
+              <div class="power-node-val">~30–50 mW</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══ FOOTER ══ -->
+  <div class="proj-footer">
+    <p>© 2026 Daniel Carrascoza</p>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+      <a href="https://github.com/danielcarrascoza/network-ids-soc" class="btn btn-fill" target="_blank" rel="noopener">View on GitHub →</a>
+      <a href="index.html" class="btn btn-line">← All projects</a>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+  const obs = new IntersectionObserver(
+    es => es.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+    }),
+    { threshold: 0.06, rootMargin: '0px 0px -40px 0px' }
+  );
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+
+</body>
+</html>
