@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GPU-Accelerated Python Library — Daniel Carrascoza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;1,300;1,400&family=Karla:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#f7f4ef;--bg2:#ede7dc;--bg3:#e3dbd0;
+      --text:#1c1b18;--muted:#6b6456;--faint:#a39887;
+      --accent:#4a7a5a;--border:rgba(90,70,50,0.13);--border2:rgba(90,70,50,0.26);
+    }
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);font-family:'Karla',sans-serif;font-weight:300;line-height:1.7}
+    body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 70% 55% at 92% 8%,rgba(100,150,80,0.08),transparent),
+                 radial-gradient(ellipse 45% 60% at 4% 92%,rgba(80,130,60,0.06),transparent)}
+    *{position:relative;z-index:1}
+    a{color:inherit;text-decoration:none}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;
+      display:flex;justify-content:space-between;align-items:center;
+      padding:1.1rem 3.5rem;
+      background:rgba(247,244,239,0.86);backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--border)}
+    .nav-logo{font-family:'Cormorant Garant',serif;font-size:1.1rem;font-weight:400}
+    .nav-links{display:flex;gap:2rem;list-style:none}
+    .nav-links a{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.09em;
+      text-transform:uppercase;color:var(--muted);transition:color 0.2s}
+    .nav-links a:hover{color:var(--accent)}
+
+    /* BUTTONS */
+    .btn{font-family:'IBM Plex Mono',monospace;font-size:0.69rem;letter-spacing:0.08em;
+      text-transform:uppercase;padding:0.65rem 1.4rem;border-radius:1px;
+      transition:all 0.2s;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem}
+    .btn-fill{background:var(--accent);color:#fff;border:1px solid var(--accent)}
+    .btn-fill:hover{background:#3d6b4c}
+    .btn-line{border:1px solid var(--border2);color:var(--muted)}
+    .btn-line:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* DETAIL */
+    .detail-wrap{padding:7rem 3.5rem 5rem;max-width:860px;margin:0 auto}
+
+    .back-btn{display:inline-flex;align-items:center;gap:0.5rem;
+      font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:0.08em;
+      text-transform:uppercase;color:var(--muted);padding:0;margin-bottom:3rem;transition:color 0.2s}
+    .back-btn::before{content:'←';margin-right:0.25rem}
+    .back-btn:hover{color:var(--accent)}
+
+    .proj-field-badge{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;
+      letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:0.75rem}
+    .proj-title{font-family:'Cormorant Garant',serif;font-size:clamp(2.2rem,5vw,4rem);
+      font-weight:300;line-height:1.05;margin-bottom:0.5rem}
+    .proj-subtitle{font-family:'Cormorant Garant',serif;font-size:1.15rem;font-style:italic;
+      color:var(--muted);margin-bottom:2rem}
+
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+      gap:1px;background:var(--border);border:1px solid var(--border);margin:2rem 0 2.5rem}
+    .stat-card{background:var(--bg);padding:1.25rem 1.5rem}
+    .stat-v{font-family:'Cormorant Garant',serif;font-size:2.2rem;font-weight:300;line-height:1}
+    .stat-l{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-top:0.3rem}
+
+    .section-label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;
+      letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);
+      margin-bottom:1rem;margin-top:2.5rem}
+
+    .proj-bullets{list-style:none;display:flex;flex-direction:column;gap:0.9rem;margin-bottom:2rem}
+    .proj-bullets li{padding-left:1.5rem;position:relative;font-size:0.93rem;
+      color:var(--muted);line-height:1.7}
+    .proj-bullets li::before{content:'—';position:absolute;left:0;color:var(--accent);
+      font-family:'IBM Plex Mono',monospace;font-size:0.85rem}
+
+    .tag{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;letter-spacing:0.04em;
+      padding:0.2rem 0.55rem;background:var(--bg2);border:1px solid var(--border);color:var(--muted)}
+    .tag-a{background:rgba(74,122,90,0.09);border-color:rgba(74,122,90,0.28);color:var(--accent)}
+    .tags{display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:2rem}
+
+    /* PERF TABLE */
+    .perf-table{width:100%;border-collapse:collapse;margin:1.5rem 0 2rem;font-size:0.87rem}
+    .perf-table th{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);text-align:left;
+      padding:0.75rem 1rem;border-bottom:1px solid var(--border2)}
+    .perf-table td{padding:0.85rem 1rem;border-bottom:1px solid var(--border);
+      color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.78rem}
+    .perf-table td:first-child{font-family:'Cormorant Garant',serif;font-size:1rem;
+      font-weight:400;color:var(--text)}
+    .perf-table tr:last-child td{border-bottom:none}
+    .perf-table tr:hover td{background:var(--bg2)}
+    .best{color:var(--accent)}
+    .slow{color:#b07050}
+
+    /* TWO COL */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);
+      border:1px solid var(--border);margin:1.5rem 0 2rem}
+    .two-col-cell{background:var(--bg);padding:1.5rem 2rem}
+    .two-col-cell h4{font-family:'Cormorant Garant',serif;font-size:1.1rem;font-weight:400;
+      margin-bottom:0.6rem}
+    .two-col-cell p{font-size:0.87rem;color:var(--muted);line-height:1.65}
+
+    /* CODE BLOCK */
+    .code-block{background:#1e1c19;border:1px solid var(--border2);padding:1.5rem 2rem;
+      margin:1.5rem 0 2rem;overflow-x:auto}
+    .code-block code{font-family:'IBM Plex Mono',monospace;font-size:0.78rem;
+      line-height:1.7;color:#c8bfb0;white-space:pre}
+    .code-block .kw{color:#7ab890}
+    .code-block .str{color:#c8a96e}
+    .code-block .fn{color:#89b4a8}
+    .code-block .cm{color:#6b6456}
+
+    .divider{border:none;border-top:1px solid var(--border);margin:2.5rem 0}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:1.5rem 3.5rem;
+      display:flex;justify-content:space-between;align-items:center}
+    footer p{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;
+      letter-spacing:0.07em;color:var(--faint)}
+
+    /* ANIMATIONS */
+    @keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+    .reveal{opacity:0;transform:translateY(14px);transition:opacity 0.65s ease,transform 0.65s ease}
+    .reveal.visible{opacity:1;transform:none}
+
+    @media(max-width:900px){
+      nav{padding:1rem 1.5rem}
+      .detail-wrap{padding:6rem 1.5rem 4rem}
+      .two-col{grid-template-columns:1fr}
+      .perf-table td,.perf-table th{padding:0.65rem 0.6rem}
+      footer{flex-direction:column;gap:0.5rem;padding:1.5rem}
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">Daniel Carrascoza</a>
+  <ul class="nav-links">
+    <li><a href="index.html#rtl">RTL</a></li>
+    <li><a href="index.html#ml">ML</a></li>
+    <li><a href="index.html#swe">SWE</a></li>
+    <li><a href="index.html#vlsi">VLSI</a></li>
+    <li><a href="index.html#about">About</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<div class="detail-wrap">
+
+  <a href="index.html#ml" class="back-btn">All Projects</a>
+
+  <div style="opacity:0;animation:up 0.7s 0.05s ease forwards">
+    <p class="proj-field-badge">CUDA · HPC · GPU Computing</p>
+    <h1 class="proj-title">GPU-Accelerated<br>Python Library</h1>
+    <p class="proj-subtitle">CUDA kernels exposed to Python via ctypes — tiled matrix multiplication and GPU Sobel edge detection</p>
+  </div>
+
+  <div class="stat-grid reveal">
+    <div class="stat-card">
+      <div class="stat-v">121×</div>
+      <div class="stat-l">Peak CPU Speedup</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">5×</div>
+      <div class="stat-l">vs CPU Baseline</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">N=8192</div>
+      <div class="stat-l">Max Matrix Size</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">2070S</div>
+      <div class="stat-l">RTX GPU Target</div>
+    </div>
+  </div>
+
+  <div class="tags reveal">
+    <span class="tag tag-a">CUDA</span>
+    <span class="tag tag-a">C++</span>
+    <span class="tag tag-a">Python</span>
+    <span class="tag">ctypes</span>
+    <span class="tag">cuBLAS</span>
+    <span class="tag">Shared Memory Tiling</span>
+    <span class="tag">Sobel Filter</span>
+  </div>
+
+  <hr class="divider">
+
+  <p class="section-label reveal">Overview</p>
+  <ul class="proj-bullets reveal">
+    <li>Implemented CUDA kernels in C++ and exposed them to Python as a shared library via ctypes — enabling GPU-accelerated compute from a pure Python interface without any framework overhead.</li>
+    <li>Part 1: benchmarked naïve CUDA, shared-memory tiled matrix multiplication, and cuBLAS against a CPU baseline across matrix sizes N = 512 to 8192.</li>
+    <li>Part 2: implemented a custom GPU Sobel edge-detection filter compiled into a DLL, callable directly from Python with NumPy array inputs.</li>
+  </ul>
+
+  <p class="section-label reveal">Hardware</p>
+  <div class="two-col reveal">
+    <div class="two-col-cell">
+      <h4>CPU Baseline</h4>
+      <p>Intel Core i7-9700K @ 3.6 GHz. Plain C matrix multiplication (matrix_cpu.c). Averaged over 5 runs per matrix size.</p>
+    </div>
+    <div class="two-col-cell">
+      <h4>GPU Target</h4>
+      <p>NVIDIA RTX 2070 Super. Naïve kernel (matrix_cuda.cu), optimized tiled kernel (matrix_cuda_opt.cu), and cuBLAS reference. All CUDA runs averaged over 5 iterations.</p>
+    </div>
+  </div>
+
+  <p class="section-label reveal">Performance — Matrix Multiplication</p>
+  <table class="perf-table reveal">
+    <thead>
+      <tr>
+        <th>Implementation</th>
+        <th>N = 512</th>
+        <th>N = 1024</th>
+        <th>N = 2048</th>
+        <th>N = 4096</th>
+        <th>N = 8192</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>CPU (i7-9700K)</td>
+        <td class="slow">0.242 s</td>
+        <td class="slow">1.464 s</td>
+        <td class="slow">40.34 s</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>Naïve CUDA</td>
+        <td>0.212 s</td>
+        <td>0.245 s</td>
+        <td>0.344 s</td>
+        <td>0.903 s</td>
+        <td>3.577 s</td>
+      </tr>
+      <tr>
+        <td>Optimized CUDA</td>
+        <td>0.224 s</td>
+        <td>0.243 s</td>
+        <td>0.333 s</td>
+        <td>0.791 s</td>
+        <td>3.01 s</td>
+      </tr>
+      <tr>
+        <td>cuBLAS</td>
+        <td>0.309 s</td>
+        <td>0.318 s</td>
+        <td>0.323 s</td>
+        <td class="best">0.407 s</td>
+        <td class="best">0.802 s</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="section-label reveal">Analysis</p>
+  <ul class="proj-bullets reveal">
+    <li>GPU advantage is negligible at small sizes (N=512, ~1.1× speedup) due to kernel launch overhead — the GPU begins to significantly outperform the CPU at N=1024 (~6× speedup) and dominates at N=2048 with over 117× speedup for the naïve kernel.</li>
+    <li>Shared-memory tiling provides a modest but consistent improvement over the naïve kernel (121× vs. 117× at N=2048), with the gap widening further at N=4096 and N=8192.</li>
+    <li>cuBLAS carries higher startup overhead than both hand-written kernels at small N, but scales nearly flat — at N=8192 it is 3.75× faster than the optimized kernel, reflecting superior memory hierarchy utilization (likely tensor core and warp-level optimizations not accessible in hand-written CUDA).</li>
+    <li>Practical recommendation: hand-written tiled kernels are competitive for small-to-mid matrices; cuBLAS is the correct choice once N exceeds ~2048.</li>
+  </ul>
+
+  <p class="section-label reveal">Part 2 — GPU Sobel Edge Detection</p>
+  <ul class="proj-bullets reveal">
+    <li>Implemented a CUDA Sobel filter (conv-sobel.cu) that computes horizontal and vertical gradient magnitudes in parallel across all pixels, compiled into a shared library (sobel_lib.dll).</li>
+    <li>Python wrapper (conv-sobel-called.py) loads the DLL via ctypes, passes NumPy uint8 arrays with C_CONTIGUOUS layout directly to the GPU kernel, and writes the edge-detected grayscale output to disk.</li>
+    <li>Validated on three test images (259×194, 277×182, 225×225) — clean edge maps with strong structural detail preserved across varied image content.</li>
+  </ul>
+
+  <p class="section-label reveal">Python Interface</p>
+  <div class="code-block reveal"><code><span class="kw">def</span> <span class="fn">load_dll</span>():
+    here = os.path.dirname(os.path.abspath(__file__))
+    dll_path = os.path.join(here, <span class="str">"sobel_lib.dll"</span>)
+    lib = ctypes.CDLL(dll_path)
+    lib.gpu_sobel.argtypes = [
+        np.ctypeslib.ndpointer(dtype=np.uint8, ndim=<span class="str">1</span>, flags=<span class="str">"C_CONTIGUOUS"</span>),
+        np.ctypeslib.ndpointer(dtype=np.uint8, ndim=<span class="str">1</span>, flags=<span class="str">"C_CONTIGUOUS"</span>),
+        ctypes.c_int,
+        ctypes.c_int
+    ]
+    lib.gpu_sobel.restype = <span class="kw">None</span>
+    <span class="kw">return</span> lib
+
+<span class="cm"># Usage: python conv-sobel-called.py images.jpg output.jpg</span></code></div>
+
+  <div style="margin-top:3rem;display:flex;gap:0.75rem;flex-wrap:wrap" class="reveal">
+    <a href="index.html#ml" class="btn btn-fill">← Back to ML Projects</a>
+    <a href="https://github.com/danielcarrascoza/cuda-lab" class="btn btn-line" target="_blank" rel="noopener">GitHub</a>
+    <a href="index.html#contact" class="btn btn-line">Contact</a>
+  </div>
+
+</div>
+
+<footer>
+  <p>© 2026 Daniel Carrascoza</p>
+  <p>RTL · ML · VLSI · Software</p>
+</footer>
+
+<script>
+  const obs = new IntersectionObserver(
+    entries => entries.forEach(e => {
+      if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); }
+    }),
+    { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
+  );
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

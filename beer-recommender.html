@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Beer Recommendation System — Daniel Carrascoza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;1,300;1,400&family=Karla:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#f7f4ef;--bg2:#ede7dc;--bg3:#e3dbd0;
+      --text:#1c1b18;--muted:#6b6456;--faint:#a39887;
+      --accent:#4a7a5a;--border:rgba(90,70,50,0.13);--border2:rgba(90,70,50,0.26);
+    }
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);font-family:'Karla',sans-serif;font-weight:300;line-height:1.7}
+    body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 70% 55% at 92% 8%,rgba(100,150,80,0.08),transparent),
+                 radial-gradient(ellipse 45% 60% at 4% 92%,rgba(80,130,60,0.06),transparent)}
+    *{position:relative;z-index:1}
+    a{color:inherit;text-decoration:none}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;
+      display:flex;justify-content:space-between;align-items:center;
+      padding:1.1rem 3.5rem;
+      background:rgba(247,244,239,0.86);backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--border)}
+    .nav-logo{font-family:'Cormorant Garant',serif;font-size:1.1rem;font-weight:400;cursor:pointer}
+    .nav-links{display:flex;gap:2rem;list-style:none}
+    .nav-links a{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.09em;
+      text-transform:uppercase;color:var(--muted);transition:color 0.2s}
+    .nav-links a:hover{color:var(--accent)}
+
+    /* BUTTONS */
+    .btn{font-family:'IBM Plex Mono',monospace;font-size:0.69rem;letter-spacing:0.08em;
+      text-transform:uppercase;padding:0.65rem 1.4rem;border-radius:1px;
+      transition:all 0.2s;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem}
+    .btn-fill{background:var(--accent);color:#fff;border:1px solid var(--accent)}
+    .btn-fill:hover{background:#3d6b4c}
+    .btn-line{border:1px solid var(--border2);color:var(--muted)}
+    .btn-line:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* DETAIL */
+    .detail-wrap{padding:7rem 3.5rem 5rem;max-width:860px;margin:0 auto}
+
+    .back-btn{display:inline-flex;align-items:center;gap:0.5rem;
+      font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:0.08em;
+      text-transform:uppercase;color:var(--muted);background:none;border:none;
+      cursor:pointer;padding:0;margin-bottom:3rem;transition:color 0.2s}
+    .back-btn::before{content:'←';margin-right:0.25rem}
+    .back-btn:hover{color:var(--accent)}
+
+    .proj-field-badge{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;
+      letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:0.75rem}
+    .proj-title{font-family:'Cormorant Garant',serif;font-size:clamp(2.2rem,5vw,4rem);
+      font-weight:300;line-height:1.05;margin-bottom:0.5rem}
+    .proj-subtitle{font-family:'Cormorant Garant',serif;font-size:1.15rem;font-style:italic;
+      color:var(--muted);margin-bottom:2rem}
+
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+      gap:1px;background:var(--border);border:1px solid var(--border);margin:2rem 0 2.5rem}
+    .stat-card{background:var(--bg);padding:1.25rem 1.5rem}
+    .stat-v{font-family:'Cormorant Garant',serif;font-size:2.2rem;font-weight:300;line-height:1}
+    .stat-l{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-top:0.3rem}
+
+    .section-label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;
+      letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);
+      margin-bottom:1rem;margin-top:2.5rem}
+
+    .proj-bullets{list-style:none;display:flex;flex-direction:column;gap:0.9rem;margin-bottom:2rem}
+    .proj-bullets li{padding-left:1.5rem;position:relative;font-size:0.93rem;
+      color:var(--muted);line-height:1.7}
+    .proj-bullets li::before{content:'—';position:absolute;left:0;color:var(--accent);
+      font-family:'IBM Plex Mono',monospace;font-size:0.85rem}
+
+    .tag{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;letter-spacing:0.04em;
+      padding:0.2rem 0.55rem;background:var(--bg2);border:1px solid var(--border);color:var(--muted)}
+    .tag-a{background:rgba(74,122,90,0.09);border-color:rgba(74,122,90,0.28);color:var(--accent)}
+    .tags{display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:2rem}
+
+    /* MODEL PROGRESSION TABLE */
+    .model-table{width:100%;border-collapse:collapse;margin:1.5rem 0 2rem;
+      font-size:0.87rem}
+    .model-table th{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);text-align:left;
+      padding:0.75rem 1rem;border-bottom:1px solid var(--border2)}
+    .model-table td{padding:0.9rem 1rem;border-bottom:1px solid var(--border);color:var(--muted)}
+    .model-table tr:last-child td{border-bottom:none}
+    .model-table td:first-child{font-family:'Cormorant Garant',serif;font-size:1rem;
+      font-weight:400;color:var(--text)}
+    .model-table .best{color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:0.8rem}
+    .model-table tr:hover td{background:var(--bg2)}
+
+    /* TWO COL */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);
+      border:1px solid var(--border);margin:1.5rem 0 2rem}
+    .two-col-cell{background:var(--bg);padding:1.5rem 2rem}
+    .two-col-cell h4{font-family:'Cormorant Garant',serif;font-size:1.1rem;font-weight:400;
+      margin-bottom:0.6rem}
+    .two-col-cell p{font-size:0.87rem;color:var(--muted);line-height:1.65}
+
+    .divider{border:none;border-top:1px solid var(--border);margin:2.5rem 0}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:1.5rem 3.5rem;
+      display:flex;justify-content:space-between;align-items:center}
+    footer p{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;
+      letter-spacing:0.07em;color:var(--faint)}
+
+    /* ANIMATIONS */
+    @keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+    .reveal{opacity:0;transform:translateY(14px);transition:opacity 0.65s ease,transform 0.65s ease}
+    .reveal.visible{opacity:1;transform:none}
+
+    @media(max-width:900px){
+      nav{padding:1rem 1.5rem}
+      .detail-wrap{padding:6rem 1.5rem 4rem}
+      .two-col{grid-template-columns:1fr}
+      .model-table td,.model-table th{padding:0.65rem 0.75rem}
+      footer{flex-direction:column;gap:0.5rem;padding:1.5rem}
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">Daniel Carrascoza</a>
+  <ul class="nav-links">
+    <li><a href="index.html#rtl">RTL</a></li>
+    <li><a href="index.html#ml">ML</a></li>
+    <li><a href="index.html#swe">SWE</a></li>
+    <li><a href="index.html#vlsi">VLSI</a></li>
+    <li><a href="index.html#about">About</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<div class="detail-wrap">
+
+  <a href="index.html#ml" class="back-btn">All Projects</a>
+
+  <div style="opacity:0;animation:up 0.7s 0.05s ease forwards">
+    <p class="proj-field-badge">NLP · Recommender System · Machine Learning</p>
+    <h1 class="proj-title">Text-Based Beer<br>Recommendation System</h1>
+    <p class="proj-subtitle">Predicting beer ratings from review text and taste features using TF-IDF and regression</p>
+  </div>
+
+  <div class="stat-grid reveal">
+    <div class="stat-card">
+      <div class="stat-v">2.9M</div>
+      <div class="stat-l">Reviews</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">110K</div>
+      <div class="stat-l">Unique Beers</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">29,265</div>
+      <div class="stat-l">Users</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">23.5%</div>
+      <div class="stat-l">Best Text Accuracy</div>
+    </div>
+  </div>
+
+  <div class="tags reveal">
+    <span class="tag tag-a">Scikit-learn</span>
+    <span class="tag tag-a">NLTK</span>
+    <span class="tag tag-a">TF-IDF</span>
+    <span class="tag">NLP</span>
+    <span class="tag">Python</span>
+    <span class="tag">Pandas</span>
+    <span class="tag">Logistic Regression</span>
+    <span class="tag">RateBeer Dataset</span>
+  </div>
+
+  <hr class="divider">
+
+  <p class="section-label reveal">Overview</p>
+  <ul class="proj-bullets reveal">
+    <li>Built a predictive model on the RateBeer dataset (2,924,163 reviews, 110,299 beers, 29,265 users) to forecast overall beer ratings from taste scores and free-text reviews.</li>
+    <li>Explored whether ABV, taste sub-ratings, and review text sentiment could predict overall satisfaction — progressing from simple regression baselines to NLP-based classifiers.</li>
+    <li>70/30 train-validation split for regression models; 90/10 split for text classification to manage the cost of vectorizing millions of reviews.</li>
+  </ul>
+
+  <p class="section-label reveal">Dataset &amp; Features</p>
+  <div class="two-col reveal">
+    <div class="two-col-cell">
+      <h4>RateBeer Dataset</h4>
+      <p>13 fields per review including beer name, brewer ID, ABV, beer style, and sub-ratings for appearance, aroma, palate, taste, and overall (scale 5–20). Null values cleaned; non-numeric characters removed before modeling.</p>
+    </div>
+    <div class="two-col-cell">
+      <h4>Feature Selection</h4>
+      <p>Primary regression feature: <code>review/taste</code> (0–10 scale, normalized). Target: <code>review/overall</code>. For text models, review text was vectorized via Bag-of-Words and TF-IDF. ABV explored as a standalone predictor but showed no clear linear trend with overall rating.</p>
+    </div>
+  </div>
+
+  <p class="section-label reveal">Model Progression</p>
+  <table class="model-table reveal">
+    <thead>
+      <tr>
+        <th>Model</th>
+        <th>Approach</th>
+        <th>Metric</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Linear Regression</td>
+        <td>Taste score → overall rating</td>
+        <td>MSE (regularized)</td>
+        <td>2.609</td>
+      </tr>
+      <tr>
+        <td>Logistic Regression</td>
+        <td>Taste score → high/low (≥15 threshold), balanced class weights</td>
+        <td>BER</td>
+        <td>0.1948</td>
+      </tr>
+      <tr>
+        <td>Bag of Words</td>
+        <td>CountVectorizer on review text + StandardScaler (10K subset)</td>
+        <td>Accuracy</td>
+        <td>21.13%</td>
+      </tr>
+      <tr>
+        <td>TF-IDF + Logistic</td>
+        <td>TfidfVectorizer on review text, no intercept</td>
+        <td>Accuracy</td>
+        <td class="best">23.52% ↑</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="section-label reveal">Key Findings</p>
+  <ul class="proj-bullets reveal">
+    <li>Taste sub-rating is a strong linear predictor of overall satisfaction — the regression models performed well despite their simplicity, reflecting the tight coupling of taste and overall scores in the RateBeer schema.</li>
+    <li>ABV alone showed no clear linear relationship with overall rating in scatter analysis, confirming that flavor perception — not alcohol content — drives user scores.</li>
+    <li>TF-IDF outperformed Bag-of-Words (23.52% vs. 21.13%) by weighting rare, discriminative terms and down-weighting high-frequency filler words in the review corpus.</li>
+    <li>Text-only classification underperforms taste-based regression, but demonstrates that raw review sentiment carries signal — a hybrid model combining taste features with TF-IDF vectors would likely outperform either approach alone.</li>
+  </ul>
+
+  <p class="section-label reveal">Limitations &amp; Next Steps</p>
+  <ul class="proj-bullets reveal">
+    <li>Text models were trained on a 10,000-entry subset due to compute constraints; training on the full 2.9M corpus would substantially improve accuracy.</li>
+    <li>The 196-class overall rating scale (0–20) makes pure text classification difficult — framing as a regression or coarser bucketing (low / mid / high) would be more tractable.</li>
+    <li>Incorporating collaborative filtering (matrix factorization) alongside content-based features would enable user-personalized recommendations beyond global rating prediction.</li>
+  </ul>
+
+  <div style="margin-top:3rem;display:flex;gap:0.75rem;flex-wrap:wrap" class="reveal">
+    <a href="index.html#ml" class="btn btn-fill">← Back to ML Projects</a>
+    <a href="index.html#contact" class="btn btn-line">Get in touch</a>
+  </div>
+
+</div>
+
+<footer>
+  <p>© 2026 Daniel Carrascoza</p>
+  <p>RTL · ML · VLSI · Software</p>
+</footer>
+
+<script>
+  const obs = new IntersectionObserver(
+    entries => entries.forEach(e => {
+      if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); }
+    }),
+    { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
+  );
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

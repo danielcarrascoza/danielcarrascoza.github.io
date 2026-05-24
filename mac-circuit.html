@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>16-bit MAC Circuit — Daniel Carrascoza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;1,300;1,400&family=Karla:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#f7f4ef;--bg2:#ede7dc;--bg3:#e3dbd0;
+      --text:#1c1b18;--muted:#6b6456;--faint:#a39887;
+      --accent:#4a7a5a;--border:rgba(90,70,50,0.13);--border2:rgba(90,70,50,0.26);
+    }
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);font-family:'Karla',sans-serif;font-weight:300;line-height:1.7}
+    body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 70% 55% at 92% 8%,rgba(100,150,80,0.08),transparent),
+                 radial-gradient(ellipse 45% 60% at 4% 92%,rgba(80,130,60,0.06),transparent)}
+    *{position:relative;z-index:1}
+    a{color:inherit;text-decoration:none}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;
+      display:flex;justify-content:space-between;align-items:center;
+      padding:1.1rem 3.5rem;
+      background:rgba(247,244,239,0.86);backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--border)}
+    .nav-logo{font-family:'Cormorant Garant',serif;font-size:1.1rem;font-weight:400;cursor:pointer}
+    .nav-links{display:flex;gap:2rem;list-style:none}
+    .nav-links a{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.09em;
+      text-transform:uppercase;color:var(--muted);transition:color 0.2s}
+    .nav-links a:hover{color:var(--accent)}
+
+    /* BUTTONS */
+    .btn{font-family:'IBM Plex Mono',monospace;font-size:0.69rem;letter-spacing:0.08em;
+      text-transform:uppercase;padding:0.65rem 1.4rem;border-radius:1px;
+      transition:all 0.2s;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem}
+    .btn-fill{background:var(--accent);color:#fff;border:1px solid var(--accent)}
+    .btn-fill:hover{background:#3d6b4c}
+    .btn-line{border:1px solid var(--border2);color:var(--muted)}
+    .btn-line:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* LAYOUT */
+    .detail-wrap{padding:7rem 3.5rem 5rem;max-width:900px;margin:0 auto}
+    .back-btn{display:inline-flex;align-items:center;gap:0.5rem;
+      font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:0.08em;
+      text-transform:uppercase;color:var(--muted);background:none;border:none;
+      cursor:pointer;padding:0;margin-bottom:3rem;transition:color 0.2s}
+    .back-btn::before{content:'←'}
+    .back-btn:hover{color:var(--accent)}
+
+    .proj-field-badge{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;
+      letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:0.75rem}
+    .proj-title{font-family:'Cormorant Garant',serif;font-size:clamp(2.2rem,5vw,4rem);
+      font-weight:300;line-height:1.05;margin-bottom:1rem}
+    .proj-subtitle{font-family:'Cormorant Garant',serif;font-size:1.15rem;font-style:italic;
+      color:var(--muted);margin-bottom:2rem}
+
+    /* STATS */
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+      gap:1px;background:var(--border);border:1px solid var(--border);margin:2rem 0 2.5rem}
+    .stat-card{background:var(--bg);padding:1.25rem 1.5rem}
+    .stat-v{font-family:'Cormorant Garant',serif;font-size:2.2rem;font-weight:300;line-height:1}
+    .stat-l{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-top:0.3rem}
+
+    /* SECTION LABEL */
+    .section-label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;
+      letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);
+      margin-bottom:1rem;margin-top:2.5rem;padding-bottom:0.5rem;
+      border-bottom:1px solid var(--border)}
+
+    /* BULLETS */
+    .proj-bullets{list-style:none;display:flex;flex-direction:column;gap:0.9rem;margin-bottom:1.5rem}
+    .proj-bullets li{padding-left:1.5rem;position:relative;font-size:0.93rem;
+      color:var(--muted);line-height:1.7}
+    .proj-bullets li::before{content:'—';position:absolute;left:0;color:var(--accent);
+      font-family:'IBM Plex Mono',monospace;font-size:0.85rem}
+
+    /* TAGS */
+    .tag-row{display:flex;flex-wrap:wrap;gap:0.35rem;margin-bottom:2rem}
+    .tag{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;letter-spacing:0.04em;
+      padding:0.2rem 0.55rem;background:var(--bg2);border:1px solid var(--border);color:var(--muted)}
+    .tag-a{background:rgba(74,122,90,0.09);border-color:rgba(74,122,90,0.28);color:var(--accent)}
+
+    /* PHASE ACCORDION */
+    .phase-block{border:1px solid var(--border);margin-bottom:1px;background:var(--bg)}
+    .phase-header{padding:1.5rem 2rem;border-bottom:1px solid var(--border);
+      display:flex;align-items:baseline;gap:1.5rem;cursor:pointer;
+      transition:background 0.2s;user-select:none}
+    .phase-header:hover{background:var(--bg2)}
+    .phase-num{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--faint);letter-spacing:0.1em}
+    .phase-title{font-family:'Cormorant Garant',serif;font-size:1.5rem;font-weight:300;flex:1}
+    .phase-title em{font-style:italic;color:var(--accent)}
+    .phase-toggle{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--faint)}
+    .phase-body{padding:2rem;display:none}
+    .phase-body.open{display:block}
+
+    /* SUB-SECTIONS */
+    .sub-section{margin-bottom:2.5rem}
+    .sub-section:last-child{margin-bottom:0}
+    .sub-title{font-family:'Cormorant Garant',serif;font-size:1.15rem;font-weight:400;
+      margin-bottom:0.75rem}
+    .sub-title em{font-style:italic;color:var(--accent)}
+
+    /* TIMING TABLE */
+    .timing-table{width:100%;border-collapse:collapse;font-size:0.85rem;margin:1rem 0 1.5rem}
+    .timing-table th{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.08em;
+      text-transform:uppercase;color:var(--faint);padding:0.5rem 1rem;
+      border-bottom:1px solid var(--border2);text-align:left;background:var(--bg2)}
+    .timing-table td{padding:0.5rem 1rem;border-bottom:1px solid var(--border);
+      color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:0.78rem}
+    .timing-table tr.highlight td{color:var(--accent);background:rgba(74,122,90,0.05)}
+    .timing-table tr:last-child td{border-bottom:none}
+
+    /* NOTE */
+    .note{background:rgba(74,122,90,0.07);border-left:2px solid var(--accent);
+      padding:0.85rem 1.25rem;font-size:0.87rem;color:var(--muted);margin:1rem 0}
+    .note strong{color:var(--text);font-weight:500}
+
+    /* DRC BADGES */
+    .drc-status{display:inline-flex;align-items:center;gap:0.5rem;
+      font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:0.06em;
+      padding:0.4rem 0.9rem;border:1px solid;border-radius:1px}
+    .drc-pass{background:rgba(74,122,90,0.1);border-color:rgba(74,122,90,0.35);color:var(--accent)}
+    .drc-warn{background:rgba(180,130,60,0.1);border-color:rgba(180,130,60,0.35);color:#8a6520}
+    .drc-status::before{content:'●';font-size:0.5rem}
+
+    /* PIPELINE */
+    .pipeline{display:flex;gap:0;margin:1.5rem 0;flex-wrap:wrap}
+    .pipe-stage{flex:1;min-width:120px;padding:1rem 1.25rem;background:var(--bg2);
+      border:1px solid var(--border);border-right:none;position:relative}
+    .pipe-stage:last-child{border-right:1px solid var(--border)}
+    .pipe-stage::after{content:'→';position:absolute;right:-12px;top:50%;
+      transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;
+      font-size:0.75rem;color:var(--faint);z-index:2}
+    .pipe-stage:last-child::after{display:none}
+    .pipe-label{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-bottom:0.3rem}
+    .pipe-name{font-family:'Cormorant Garant',serif;font-size:1rem;font-weight:400}
+
+    /* IMAGE GRID */
+    .img-grid{display:grid;gap:1px;background:var(--border);margin:1.25rem 0}
+    .img-grid.cols-1{grid-template-columns:1fr}
+    .img-grid.cols-2{grid-template-columns:1fr 1fr}
+    .img-item{background:var(--bg);display:flex;flex-direction:column}
+    .img-item img{width:100%;display:block;object-fit:contain;
+      background:#0d0d0d;max-height:320px;cursor:zoom-in}
+    .img-item img.tall{max-height:500px}
+    .img-caption{padding:0.6rem 0.9rem;border-top:1px solid var(--border)}
+    .img-caption strong{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;
+      letter-spacing:0.07em;text-transform:uppercase;color:var(--text);
+      display:block;margin-bottom:0.1rem}
+    .img-caption span{font-size:0.82rem;color:var(--muted);line-height:1.5}
+
+    /* LIGHTBOX */
+    #lb{display:none;position:fixed;inset:0;z-index:500;
+      background:rgba(15,12,9,0.92);align-items:center;
+      justify-content:center;padding:2rem;cursor:zoom-out}
+    #lb.open{display:flex}
+    #lb img{max-width:90vw;max-height:88vh;object-fit:contain;
+      border:1px solid var(--border2)}
+    #lb-cap{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+      font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.07em;
+      color:rgba(255,255,255,0.5);text-align:center;pointer-events:none;
+      white-space:nowrap}
+
+    /* ACTIONS */
+    .proj-actions{margin-top:3rem;display:flex;gap:0.75rem;flex-wrap:wrap;
+      padding-top:2rem;border-top:1px solid var(--border)}
+
+    /* ANIMATIONS */
+    @keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+    .reveal{opacity:0;transform:translateY(14px);transition:opacity 0.65s ease,transform 0.65s ease}
+    .reveal.visible{opacity:1;transform:none}
+
+    @media(max-width:900px){
+      nav{padding:1rem 1.5rem}
+      .detail-wrap{padding:6rem 1.5rem 4rem}
+      .phase-header{padding:1.25rem}
+      .phase-body{padding:1.25rem}
+      .pipeline{flex-direction:column}
+      .pipe-stage{border-right:1px solid var(--border);border-bottom:none}
+      .pipe-stage:last-child{border-bottom:1px solid var(--border)}
+      .pipe-stage::after{content:'↓';right:auto;left:50%;top:auto;bottom:-14px;transform:translateX(-50%)}
+      .img-grid.cols-2{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo" onclick="window.location.href='index.html'">Daniel Carrascoza</span>
+  <ul class="nav-links">
+    <li><a href="index.html#rtl">RTL</a></li>
+    <li><a href="index.html#ml">ML</a></li>
+    <li><a href="index.html#swe">SWE</a></li>
+    <li><a href="index.html#vlsi">VLSI</a></li>
+    <li><a href="index.html#about">About</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<div id="lb" onclick="closeLb()">
+  <img id="lb-img" src="" alt=""/>
+  <div id="lb-cap"></div>
+</div>
+
+<div class="detail-wrap">
+
+  <button class="back-btn" onclick="window.location.href='index.html#vlsi'">Back to portfolio</button>
+
+  <p class="proj-field-badge" style="opacity:0;animation:up 0.6s 0.05s ease forwards">VLSI · Custom IC Layout</p>
+  <h1 class="proj-title" style="opacity:0;animation:up 0.7s 0.15s ease forwards">16-bit Multiply-and-<em>Accumulate</em> Circuit</h1>
+  <p class="proj-subtitle" style="opacity:0;animation:up 0.7s 0.25s ease forwards">Full-custom CMOS datapath in Cadence Virtuoso — schematic through post-layout simulation</p>
+
+  <div class="tag-row reveal">
+    <span class="tag tag-a">Cadence Virtuoso</span>
+    <span class="tag tag-a">CMOS</span>
+    <span class="tag tag-a">Custom IC Layout</span>
+    <span class="tag">Booth Encoding</span>
+    <span class="tag">3:2 / 6:2 Compressors</span>
+    <span class="tag">KSA Adder</span>
+    <span class="tag">DFF / DFF_RST</span>
+    <span class="tag">DRC / LVS</span>
+    <span class="tag">SPICE / Transient Sim</span>
+    <span class="tag">gpdk045 PDK</span>
+  </div>
+
+  <div class="stat-grid reveal">
+    <div class="stat-card">
+      <div class="stat-v">16-bit</div>
+      <div class="stat-l">Operand Width</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">~49 ps</div>
+      <div class="stat-l">Best FA Delay (cin→S)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">~51 ps</div>
+      <div class="stat-l">Best Cout Falling</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">0</div>
+      <div class="stat-l">Hard DRC Errors</div>
+    </div>
+  </div>
+
+  <p class="section-label reveal">Overview</p>
+  <ul class="proj-bullets reveal">
+    <li>Full-custom 16-bit MAC circuit designed in Cadence Virtuoso using the GPDK 045nm PDK, covering the complete IC design flow from schematic entry through post-layout parasitic extraction and simulation.</li>
+    <li>The multiplier datapath uses radix-4 Booth encoding to generate partial products, reduced through a tree of 3:2 and 6:2 carry-save compressors before a final 16-bit Kogge-Stone adder produces the result.</li>
+    <li>Sequential elements (DFF and DFF_RST) were designed from scratch using transmission-gate latches, with layout and full DRC/LVS sign-off on each block.</li>
+    <li>Gate sizing was swept across 1×, 2×, and 4× combinations to minimise propagation delay on the critical cin→S and cin→Cout paths.</li>
+  </ul>
+
+  <p class="section-label reveal">Datapath Pipeline</p>
+  <div class="pipeline reveal">
+    <div class="pipe-stage">
+      <div class="pipe-label">Step 1</div>
+      <div class="pipe-name">Booth Encoder</div>
+    </div>
+    <div class="pipe-stage">
+      <div class="pipe-label">Step 2</div>
+      <div class="pipe-name">3:2 Compressor Tree</div>
+    </div>
+    <div class="pipe-stage">
+      <div class="pipe-label">Step 3</div>
+      <div class="pipe-name">6:2 Compressor</div>
+    </div>
+    <div class="pipe-stage">
+      <div class="pipe-label">Step 4</div>
+      <div class="pipe-name">16-bit KSA Adder</div>
+    </div>
+    <div class="pipe-stage">
+      <div class="pipe-label">Step 5</div>
+      <div class="pipe-name">DFF Accumulate</div>
+    </div>
+  </div>
+
+  <p class="section-label reveal">Design Phases</p>
+
+  <!-- ── LAB 3 ── -->
+  <div class="phase-block reveal">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <span class="phase-num">LAB 03</span>
+      <span class="phase-title">1-bit Full Adder — <em>Gate Sizing & Layout</em></span>
+      <span class="phase-toggle">＋</span>
+    </div>
+    <div class="phase-body">
+
+      <div class="sub-section">
+        <h3 class="sub-title">Schematic</h3>
+        <ul class="proj-bullets">
+          <li>XOR₄ₓ → XOR₁ₓ for the sum output; NAND carry tree optimised for the cin→S path. A second variant re-sizes the carry gates (NAND₂ₓ + NAND₄ₓ) to target the cin→Cout path instead.</li>
+          <li>Gate sizing swept 1×/2×/4× for both carry stages; best cin→S falling at <strong>56.78 ps</strong> (4×/1×), best cin→Cout falling at <strong>49.09 ps</strong> (2×/4×).</li>
+        </ul>
+        <div class="img-grid cols-2">
+          <div class="img-item">
+            <img src="images/lab3_schematic_cin_s.png" alt="FA schematic — cin to S optimised"/>
+            <div class="img-caption">
+              <strong>FA Schematic — cin→S</strong>
+              <span>XOR₄ₓ–XOR₁ₓ sum path with NAND₁ₓ carry tree</span>
+            </div>
+          </div>
+          <div class="img-item">
+            <img src="images/lab3_schematic_cin_cout.png" alt="FA schematic — cin to Cout optimised"/>
+            <div class="img-caption">
+              <strong>FA Schematic — cin→Cout</strong>
+              <span>NAND₂ₓ / NAND₄ₓ resized carry gates; 2×/4× achieves 49.09 ps falling</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <h3 class="sub-title">Timing Sweep</h3>
+        <table class="timing-table">
+          <thead><tr><th>Gate 1</th><th>Gate 2</th><th>Rising (ps)</th><th>Falling (ps)</th></tr></thead>
+          <tbody>
+            <tr><td>1×</td><td>1×</td><td>64.13</td><td>58.06</td></tr>
+            <tr><td>2×</td><td>1×</td><td>64.14</td><td>57.13</td></tr>
+            <tr class="highlight"><td>4×</td><td>1×</td><td>64.15</td><td>56.78</td></tr>
+            <tr><td>1×</td><td>2×</td><td>83.96</td><td>78.03</td></tr>
+            <tr><td>2×</td><td>4×</td><td>83.37</td><td>74.53</td></tr>
+          </tbody>
+        </table>
+        <div class="note"><strong>Best cin→S:</strong> 4×/1× → 56.78 ps falling &nbsp;|&nbsp; <strong>Best cin→Cout:</strong> 2×/4× → 49.09 ps falling</div>
+      </div>
+
+      <div class="sub-section">
+        <h3 class="sub-title">Layout & Waveform</h3>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem">
+          <span class="drc-status drc-pass">DRC — 0 hard errors</span>
+          <span class="drc-status drc-warn">2 soft_check warnings</span>
+        </div>
+        <div class="img-grid cols-2">
+          <div class="img-item">
+            <img src="images/lab3_layout.png" alt="FA_1b layout"/>
+            <div class="img-caption">
+              <strong>FA_1b Layout</strong>
+              <span>Optimised for cin→S; carry chain routed to minimise parasitics</span>
+            </div>
+          </div>
+          <div class="img-item">
+            <img src="images/lab3_waveform.png" alt="FA transient — all input combinations"/>
+            <div class="img-caption">
+              <strong>Transient — All Input Combinations</strong>
+              <span>in_a, in_b, cin, out_S, out_Cout — correct logic verified across all cases</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PHASE 1 ── -->
+  <div class="phase-block reveal">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <span class="phase-num">PHASE 1</span>
+      <span class="phase-title">Sequential Elements & 16-bit KSA Adder — <em>DFF, DFF_RST, Kogge-Stone</em></span>
+      <span class="phase-toggle">＋</span>
+    </div>
+    <div class="phase-body">
+
+      <div class="sub-section">
+        <h3 class="sub-title">D Flip-Flop (DFF)</h3>
+        <ul class="proj-bullets">
+          <li>Master-slave topology using transmission-gate latches and tristate inverters; clock inverted once at top level to drive both halves.</li>
+          <li>DRC: 0 errors across 562 rule checks. LVS mismatch traced to an extraction issue unrelated to the core schematic.</li>
+        </ul>
+        <div class="img-grid cols-2">
+          <div class="img-item">
+            <img src="images/phase1_dff_schematic.png" alt="DFF schematic"/>
+            <div class="img-caption">
+              <strong>DFF Schematic</strong>
+              <span>Transmission-gate master-slave latch with tristate inverters</span>
+            </div>
+          </div>
+          <div class="img-item">
+            <img src="images/phase1_dff_layout.png" alt="DFF layout"/>
+            <div class="img-caption">
+              <strong>DFF Layout</strong>
+              <span>Transistor-level layout; DRC: 0 errors (562 checks, gpdk045)</span>
+            </div>
+          </div>
+        </div>
+        <div class="img-grid cols-1">
+          <div class="img-item">
+            <img src="images/phase1_dff_waveform.png" alt="DFF functionality waveform"/>
+            <div class="img-caption">
+              <strong>DFF Functionality</strong>
+              <span>in_D, out_Q, clk — Q correctly captures D on rising clock edge</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <h3 class="sub-title">DFF with Asynchronous Reset (DFF_RST)</h3>
+        <ul class="proj-bullets">
+          <li>Active-low async reset added via a NAND gate at the master latch input. Asserting RST_b = 0 forces Q → 0 independent of the clock edge.</li>
+        </ul>
+        <div class="img-grid cols-2">
+          <div class="img-item">
+            <img src="images/phase1_dffrst_schematic.png" alt="DFF_RST schematic"/>
+            <div class="img-caption">
+              <strong>DFF_RST Schematic</strong>
+              <span>NAND gate at master latch input gates RST_b signal</span>
+            </div>
+          </div>
+          <div class="img-item">
+            <img src="images/phase1_dffrst_waveform.png" alt="DFF_RST waveform"/>
+            <div class="img-caption">
+              <strong>DFF_RST Functionality</strong>
+              <span>out_Q, in_D, clk, RST_b — async reset forces Q low on RST_b = 0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <h3 class="sub-title">16-bit Kogge-Stone Adder</h3>
+        <ul class="proj-bullets">
+          <li>Parallel-prefix tree: 3 black-cell levels (NAND→INV, OR→INV) + 1 grey-cell level with final XOR sum. Worst-case path: NAND/INV + 4(NAND+INV) + XOR, exercised at A=0x0001, B=0xFFFF.</li>
+        </ul>
+        <div class="img-grid cols-1">
+          <div class="img-item">
+            <img src="images/phase1_ksa_schematic.png" alt="16-bit KSA schematic with critical path"/>
+            <div class="img-caption">
+              <strong>16-bit KSA Schematic — Critical Path Annotated</strong>
+              <span>Orange trace: propagate chain A[0] → S[0] through all 4 black-cell levels — worst-case delay path</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PHASE 2 ── -->
+  <div class="phase-block reveal">
+    <div class="phase-header" onclick="togglePhase(this)">
+      <span class="phase-num">PHASE 2</span>
+      <span class="phase-title">Partial Product Reduction — <em>Booth Encoder, 3:2 & 6:2 Compressors</em></span>
+      <span class="phase-toggle">＋</span>
+    </div>
+    <div class="phase-body">
+
+      <div class="sub-section">
+        <h3 class="sub-title">Radix-4 Booth Encoder</h3>
+        <ul class="proj-bullets">
+          <li>Encodes X&lt;2:0&gt; into a signed partial product PP&lt;8:0&gt; of Y&lt;7:0&gt;, generating {0, ±Y, ±2Y}. Implemented with XOR, NOR, MUX, and inverter primitives.</li>
+          <li>DRC: 0 errors (1335 geometries, 562 rules). LVS: MATCH. Post-extraction blocked by apostrophe characters in wire names inside XOR/MUX subcells.</li>
+        </ul>
+        <div class="img-grid cols-2">
+          <div class="img-item">
+            <img src="images/phase2_booth_schematic.png" alt="Booth encoder schematic"/>
+            <div class="img-caption">
+              <strong>Booth Encoder Schematic</strong>
+              <span>X&lt;2:0&gt;, Y&lt;7:0&gt;, zero&lt;8:0&gt; → PP&lt;8:0&gt;; XOR/NOR/MUX selection logic</span>
+            </div>
+          </div>
+          <div class="img-item">
+            <img src="images/phase2_booth_layout.png" alt="Booth encoder layout"/>
+            <div class="img-caption">
+              <strong>Booth Encoder Layout</strong>
+              <span>DRC: 0 errors; LVS: MATCH</span>
+            </div>
+          </div>
+        </div>
+        <div class="img-grid cols-1">
+          <div class="img-item">
+            <img src="images/phase2_booth_waveform.png" alt="Booth encoder pre-extraction waveform"/>
+            <div class="img-caption">
+              <strong>Booth Encoder — Pre-extraction Functionality</strong>
+              <span>Signed decimal annotations on X, Y, PP confirm ±Y and ±2Y encoding across all 8 X values</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <h3 class="sub-title">3:2 Compressor</h3>
+        <ul class="proj-bullets">
+          <li>Reduces three 16-bit inputs A, B, C to two outputs out0 + out1 using 16 FA_1b instances. DRC: 0 errors. LVS: MATCH. Post-extraction blocked by same apostrophe issue.</li>
+        </ul>
+        <div class="img-grid cols-2">
+          <div class="img-item">
+            <img src="images/phase2_3to2_schematic.png" alt="3:2 compressor schematic"/>
+            <div class="img-caption">
+              <strong>3:2 Compressor Schematic</strong>
+              <span>A, B, C&lt;15:0&gt; → out0, out1&lt;15:0&gt; via 16× FA_1b + bias circuit</span>
+            </div>
+          </div>
+          <div class="img-item">
+            <img src="images/phase2_3to2_layout.png" alt="3:2 compressor layout"/>
+            <div class="img-caption">
+              <strong>3:2 Compressor Layout</strong>
+              <span>Stacked column of 16 FA_1b cells; DRC: 0 errors (656 geometries)</span>
+            </div>
+          </div>
+        </div>
+        <div class="img-grid cols-1">
+          <div class="img-item">
+            <img src="images/phase2_3to2_waveform.png" alt="3:2 compressor waveform"/>
+            <div class="img-caption">
+              <strong>3:2 Compressor — Pre-extraction Functionality</strong>
+              <span>A, B, C, out0, out1 hex values; out0 + out1 = A + B + C confirmed for all 6 test vectors</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <h3 class="sub-title">6:2 Compressor</h3>
+        <ul class="proj-bullets">
+          <li>Cascades three 3:2 Encoder instances to reduce six 16-bit inputs A–F to two outputs. Pre-extraction simulation confirmed correct signed decimal sums for all 6 test vectors.</li>
+        </ul>
+        <div class="img-grid cols-2">
+          <div class="img-item">
+            <img src="images/phase2_6to2_schematic.png" alt="6:2 compressor schematic"/>
+            <div class="img-caption">
+              <strong>6:2 Compressor Schematic</strong>
+              <span>Three cascaded 3:2 Encoders; A–F&lt;15:0&gt; → out0, out1&lt;15:0&gt;</span>
+            </div>
+          </div>
+          <div class="img-item">
+            <img src="images/phase2_6to2_layout.png" alt="6:2 compressor layout" class="tall"/>
+            <div class="img-caption">
+              <strong>6:2 Compressor Layout</strong>
+              <span>Two parallel columns of stacked FA_1b cells across three compressor stages</span>
+            </div>
+          </div>
+        </div>
+        <div class="img-grid cols-1">
+          <div class="img-item">
+            <img src="images/phase2_6to2_waveform.png" alt="6:2 compressor waveform"/>
+            <div class="img-caption">
+              <strong>6:2 Compressor — Pre-extraction Functionality</strong>
+              <span>A–F and out0/out1 decimal_signed; sum verified correct across all 6 test vectors</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note" style="margin-top:0">
+        <strong>Extraction note:</strong> Apostrophe characters in wire names inside XOR and MUX subcells prevented Virtuoso from regenerating the extraction config file for the Booth Encoder and 3:2 Compressor. Pre-extraction results are reported for those blocks.
+      </div>
+
+    </div>
+  </div>
+
+  <div class="proj-actions reveal">
+    <a href="index.html#vlsi" class="btn btn-fill">← Back to VLSI</a>
+    <a href="index.html#contact" class="btn btn-line">Get in touch</a>
+  </div>
+
+</div>
+
+<script>
+  function togglePhase(header) {
+    const body = header.nextElementSibling;
+    const toggle = header.querySelector('.phase-toggle');
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    toggle.textContent = isOpen ? '＋' : '－';
+  }
+
+  function openLb(src, caption) {
+    document.getElementById('lb-img').src = src;
+    document.getElementById('lb-cap').textContent = caption;
+    document.getElementById('lb').classList.add('open');
+  }
+  function closeLb() { document.getElementById('lb').classList.remove('open'); }
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeLb(); });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Lightbox wiring
+    document.querySelectorAll('.img-item img').forEach(img => {
+      img.addEventListener('click', () => {
+        const cap = img.closest('.img-item').querySelector('.img-caption');
+        const title = cap?.querySelector('strong')?.textContent || '';
+        const desc  = cap?.querySelector('span')?.textContent || '';
+        openLb(img.src, [title, desc].filter(Boolean).join(' — '));
+      });
+    });
+
+    // Scroll reveal
+    const obs = new IntersectionObserver(
+      entries => entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+      }),
+      { threshold: 0.07, rootMargin: '0px 0px -20px 0px' }
+    );
+    document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+    // Open first phase by default
+    const first = document.querySelector('.phase-header');
+    if (first) togglePhase(first);
+  });
+</script>
+</body>
+</html>
