@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SqueezeNet FPGA Accelerator — Daniel Carrascoza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;1,300;1,400&family=Karla:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#f7f4ef;--bg2:#ede7dc;--bg3:#e3dbd0;
+      --text:#1c1b18;--muted:#6b6456;--faint:#a39887;
+      --accent:#4a7a5a;--border:rgba(90,70,50,0.13);--border2:rgba(90,70,50,0.26);
+    }
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);font-family:'Karla',sans-serif;font-weight:300;line-height:1.7}
+    body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 70% 55% at 92% 8%,rgba(100,150,80,0.08),transparent),
+                 radial-gradient(ellipse 45% 60% at 4% 92%,rgba(80,130,60,0.06),transparent)}
+    *{position:relative;z-index:1}
+    a{color:inherit;text-decoration:none}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;
+      display:flex;justify-content:space-between;align-items:center;
+      padding:1.1rem 3.5rem;
+      background:rgba(247,244,239,0.86);backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--border)}
+    .nav-logo{font-family:'Cormorant Garant',serif;font-size:1.1rem;font-weight:400;cursor:pointer}
+    .nav-links{display:flex;gap:2rem;list-style:none}
+    .nav-links a{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.09em;
+      text-transform:uppercase;color:var(--muted);transition:color 0.2s}
+    .nav-links a:hover{color:var(--accent)}
+
+    /* BUTTONS */
+    .btn{font-family:'IBM Plex Mono',monospace;font-size:0.69rem;letter-spacing:0.08em;
+      text-transform:uppercase;padding:0.65rem 1.4rem;border-radius:1px;
+      transition:all 0.2s;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem}
+    .btn-fill{background:var(--accent);color:#fff;border:1px solid var(--accent)}
+    .btn-fill:hover{background:#3d6b4c}
+    .btn-line{border:1px solid var(--border2);color:var(--muted)}
+    .btn-line:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* LAYOUT */
+    .detail-wrap{padding:7rem 3.5rem 5rem;max-width:920px;margin:0 auto}
+
+    .back-btn{display:inline-flex;align-items:center;gap:0.5rem;
+      font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:0.08em;
+      text-transform:uppercase;color:var(--muted);background:none;border:none;
+      cursor:pointer;padding:0;margin-bottom:3rem;transition:color 0.2s}
+    .back-btn::before{content:'←'}
+    .back-btn:hover{color:var(--accent)}
+
+    .proj-field-badge{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;
+      letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:0.75rem}
+    .proj-title{font-family:'Cormorant Garant',serif;font-size:clamp(2.2rem,5vw,4rem);
+      font-weight:300;line-height:1.05;margin-bottom:0.5rem}
+    .proj-subtitle{font-family:'Cormorant Garant',serif;font-size:1.1rem;font-style:italic;
+      color:var(--muted);margin-bottom:0.6rem}
+    .proj-authors{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.06em;
+      color:var(--faint);margin-bottom:2rem}
+    .proj-authors span{color:var(--accent)}
+
+    /* TAGS */
+    .meta-row{display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:2.5rem}
+    .tag{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;letter-spacing:0.04em;
+      padding:0.2rem 0.55rem;background:var(--bg2);border:1px solid var(--border);color:var(--muted)}
+    .tag-a{background:rgba(74,122,90,0.09);border-color:rgba(74,122,90,0.28);color:var(--accent)}
+
+    /* STAT GRID */
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      gap:1px;background:var(--border);border:1px solid var(--border);margin:0 0 3rem}
+    .stat-card{background:var(--bg);padding:1.25rem 1.5rem}
+    .stat-v{font-family:'Cormorant Garant',serif;font-size:2.2rem;font-weight:300;line-height:1}
+    .stat-l{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-top:0.3rem}
+
+    /* SECTION */
+    .section-label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;
+      letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);
+      margin-bottom:1rem;padding-bottom:0.6rem;border-bottom:1px solid var(--border)}
+
+    .algo-section{margin-bottom:3.5rem}
+    .algo-header{display:grid;grid-template-columns:auto 1fr;gap:1.25rem;
+      align-items:baseline;margin-bottom:1.75rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border2)}
+    .algo-num{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--faint);letter-spacing:0.1em}
+    .algo-title{font-family:'Cormorant Garant',serif;font-size:clamp(1.5rem,2.8vw,2.1rem);
+      font-weight:300;line-height:1.1}
+    .algo-title em{font-style:italic;color:var(--accent)}
+
+    /* OVERVIEW */
+    .overview-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:3.5rem;margin-bottom:3.5rem;align-items:start}
+    .overview-text p{font-size:0.93rem;color:var(--muted);line-height:1.75;margin-bottom:0.9rem}
+    .aside-block{padding:1.25rem 1.5rem;background:var(--bg2);border:1px solid var(--border);margin-bottom:1px}
+    .aside-block-label{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-bottom:0.5rem}
+    .aside-block-val{font-family:'Cormorant Garant',serif;font-size:1rem;font-weight:400;color:var(--text)}
+
+    /* BULLET LIST */
+    .bullet-list{list-style:none;display:flex;flex-direction:column;gap:0.85rem;margin-bottom:1.5rem}
+    .bullet-list li{padding-left:1.5rem;position:relative;font-size:0.93rem;color:var(--muted);line-height:1.7}
+    .bullet-list li::before{content:'—';position:absolute;left:0;color:var(--accent);
+      font-family:'IBM Plex Mono',monospace;font-size:0.85rem}
+
+    /* PIPELINE FLOW */
+    .pipeline{display:flex;flex-direction:column;gap:1px;margin:1.75rem 0}
+    .pipeline-stage{background:var(--bg);border:1px solid var(--border);
+      display:grid;grid-template-columns:140px 1fr;gap:0}
+    .pipeline-num{background:var(--bg2);padding:1rem 1.25rem;
+      font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:0.08em;
+      text-transform:uppercase;color:var(--accent);display:flex;align-items:center;
+      border-right:1px solid var(--border)}
+    .pipeline-body{padding:1rem 1.25rem}
+    .pipeline-title{font-family:'Cormorant Garant',serif;font-size:1rem;font-weight:400;margin-bottom:0.2rem}
+    .pipeline-desc{font-size:0.85rem;color:var(--muted);line-height:1.6}
+
+    /* ACCURACY TABLE */
+    .acc-table{width:100%;border-collapse:collapse;font-size:0.85rem;margin:1.75rem 0}
+    .acc-table th{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.08em;
+      text-transform:uppercase;color:var(--faint);text-align:left;
+      padding:0.6rem 1rem;border-bottom:1px solid var(--border2);background:var(--bg2)}
+    .acc-table td{padding:0.6rem 1rem;border-bottom:1px solid var(--border);
+      font-size:0.87rem;color:var(--muted)}
+    .acc-table td.val{font-family:'IBM Plex Mono',monospace;font-size:0.82rem}
+    .acc-table td.good{color:var(--accent);font-family:'IBM Plex Mono',monospace}
+    .acc-table td.bad{color:#b05a30;font-family:'IBM Plex Mono',monospace}
+    .acc-table tr:hover td{background:var(--bg2)}
+    .acc-table tr.highlight td{background:rgba(74,122,90,0.05)}
+
+    /* RESOURCE TABLE */
+    .resource-grid{display:grid;grid-template-columns:repeat(3,1fr);
+      gap:1px;background:var(--border);border:1px solid var(--border);margin:1.75rem 0}
+    .resource-cell{background:var(--bg);padding:1.1rem 1.25rem}
+    .resource-key{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;
+      letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);margin-bottom:0.3rem}
+    .resource-val{font-family:'Cormorant Garant',serif;font-size:1.5rem;font-weight:300;line-height:1.1}
+    .resource-sub{font-family:'IBM Plex Mono',monospace;font-size:0.6rem;color:var(--faint);margin-top:0.2rem}
+
+    /* PROGRESS BAR */
+    .bar-list{display:flex;flex-direction:column;gap:0.75rem;margin:1.75rem 0}
+    .bar-row{display:grid;grid-template-columns:130px 1fr 60px;gap:0.75rem;align-items:center}
+    .bar-label{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:0.06em;
+      text-transform:uppercase;color:var(--muted)}
+    .bar-track{height:6px;background:var(--bg3);border-radius:0}
+    .bar-fill{height:100%;background:var(--accent);border-radius:0;transition:width 0.8s ease}
+    .bar-pct{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--faint);text-align:right}
+
+    /* POWER GRID */
+    .power-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;
+      background:var(--border);border:1px solid var(--border);margin:1.75rem 0}
+    .power-cell{background:var(--bg);padding:1.1rem 1.25rem}
+    .power-key{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;
+      letter-spacing:0.06em;text-transform:uppercase;color:var(--faint);margin-bottom:0.3rem}
+    .power-val{font-family:'Cormorant Garant',serif;font-size:1.5rem;font-weight:300}
+    .power-pct{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--faint);margin-top:0.15rem}
+
+    /* CODE BLOCK */
+    .code-block{background:var(--bg2);border:1px solid var(--border);
+      padding:1.25rem 1.5rem;margin:1.75rem 0;overflow-x:auto}
+    .code-block pre{font-family:'IBM Plex Mono',monospace;font-size:0.75rem;
+      line-height:1.7;color:var(--muted);white-space:pre}
+    .code-block .cm{color:var(--faint)}
+    .code-block .kw{color:var(--accent)}
+    .code-block .ty{color:#7a6a4a}
+
+    /* FSM STATES */
+    .fsm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+      gap:1px;background:var(--border);border:1px solid var(--border);margin:1.75rem 0}
+    .fsm-cell{background:var(--bg);padding:0.9rem 1.1rem}
+    .fsm-state{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:0.06em;
+      text-transform:uppercase;color:var(--accent);margin-bottom:0.3rem}
+    .fsm-desc{font-size:0.82rem;color:var(--muted);line-height:1.5}
+
+    /* CHALLENGE/SOLUTION */
+    .cs-pair{margin:1.75rem 0}
+    .challenge-block{border-left:2px solid #b05a30;padding:0.9rem 1.25rem;
+      background:rgba(176,90,48,0.04);margin-bottom:1px}
+    .challenge-block strong{font-weight:500;color:#b05a30;font-family:'IBM Plex Mono',monospace;
+      font-size:0.72rem;letter-spacing:0.06em;text-transform:uppercase}
+    .challenge-block p{font-size:0.88rem;color:var(--muted);line-height:1.7;margin-top:0.35rem}
+    .solution-block{border-left:2px solid var(--accent);padding:0.9rem 1.25rem;
+      background:rgba(74,122,90,0.04)}
+    .solution-block strong{font-weight:500;color:var(--accent);font-family:'IBM Plex Mono',monospace;
+      font-size:0.72rem;letter-spacing:0.06em;text-transform:uppercase}
+    .solution-block p{font-size:0.88rem;color:var(--muted);line-height:1.7;margin-top:0.35rem}
+
+    /* NOTE */
+    .note-block{border-left:2px solid var(--accent);padding:0.9rem 1.25rem;
+      background:rgba(74,122,90,0.05);margin:1.75rem 0}
+    .note-block p{font-size:0.88rem;color:var(--muted);line-height:1.7}
+    .note-block strong{font-weight:500;color:var(--text);font-family:'IBM Plex Mono',monospace;
+      font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase}
+
+    /* ACTIONS */
+    .proj-actions{margin-top:3.5rem;padding-top:2rem;border-top:1px solid var(--border);
+      display:flex;gap:0.75rem;flex-wrap:wrap}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:1.5rem 3.5rem;
+      display:flex;justify-content:space-between;align-items:center}
+    footer p{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;
+      letter-spacing:0.07em;color:var(--faint)}
+
+    /* REVEAL */
+    .reveal{opacity:0;transform:translateY(14px);transition:opacity 0.65s ease,transform 0.65s ease}
+    .reveal.visible{opacity:1;transform:none}
+    @keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+    @media(max-width:900px){
+      nav{padding:1rem 1.5rem}
+      .detail-wrap{padding:6rem 1.5rem 4rem}
+      .overview-grid{grid-template-columns:1fr;gap:2rem}
+      .resource-grid{grid-template-columns:1fr 1fr}
+      .power-grid{grid-template-columns:1fr}
+      .pipeline-stage{grid-template-columns:1fr}
+      .pipeline-num{border-right:none;border-bottom:1px solid var(--border)}
+      .bar-row{grid-template-columns:100px 1fr 50px}
+      footer{flex-direction:column;gap:0.5rem;padding:1.5rem}
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo" onclick="window.location.href='index.html'">Daniel Carrascoza</span>
+  <ul class="nav-links">
+    <li><a href="index.html#rtl">RTL</a></li>
+    <li><a href="index.html#ml">ML</a></li>
+    <li><a href="index.html#swe">SWE</a></li>
+    <li><a href="index.html#vlsi">VLSI</a></li>
+    <li><a href="index.html#about">About</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<div class="detail-wrap">
+
+  <button class="back-btn" onclick="window.location.href='index.html'">Back to Portfolio</button>
+
+  <!-- HEADER -->
+  <div style="opacity:0;animation:up 0.7s 0.1s ease forwards">
+    <p class="proj-field-badge">FPGA Inference / HLS · EE 511 Final Project</p>
+    <h1 class="proj-title">SqueezeNet Hardware<br><em>Acceleration on Kria KV260</em></h1>
+    <p class="proj-subtitle">End-to-end ML-to-hardware pipeline: PyTorch training, quantization-aware fine-tuning, Vitis HLS synthesis, and PYNQ deployment</p>
+    <p class="proj-authors">Sreehari Krishnakumar · <span>Daniel Carrascoza</span> · Pravar Seth &nbsp;·&nbsp; USC EE 511</p>
+    <div class="meta-row">
+      <span class="tag tag-a">Xilinx Vitis HLS</span>
+      <span class="tag tag-a">PyTorch</span>
+      <span class="tag tag-a">FPGA</span>
+      <span class="tag">Kria KV260</span>
+      <span class="tag">Zynq UltraScale+</span>
+      <span class="tag">PYNQ</span>
+      <span class="tag">INT8 Q3.4</span>
+      <span class="tag">SqueezeNet</span>
+      <span class="tag">CIFAR-10</span>
+      <span class="tag">C++ HLS</span>
+    </div>
+  </div>
+
+  <!-- STAT GRID -->
+  <div class="stat-grid reveal">
+    <div class="stat-card">
+      <div class="stat-v">90%</div>
+      <div class="stat-l">HW Accuracy (CIFAR-10)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">4×</div>
+      <div class="stat-l">Model Compression (INT8)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">200</div>
+      <div class="stat-l">MHz Clock Frequency</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">II=1</div>
+      <div class="stat-l">Convolution Init. Interval</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">3.377</div>
+      <div class="stat-l">W Total Power</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">740K</div>
+      <div class="stat-l">Parameters</div>
+    </div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="algo-section reveal">
+    <p class="section-label">Overview</p>
+    <div class="overview-grid">
+      <div class="overview-text">
+        <p>This project implements a complete machine learning to hardware deployment pipeline for SqueezeNet — a compact CNN achieving AlexNet-level accuracy with 50× fewer parameters — on the Xilinx Kria KV260 FPGA. The pipeline spans PyTorch model training, quantization-aware training (QAT), C++ HLS optimization, and PYNQ-based deployment.</p>
+        <p>The accelerator uses 8-bit fixed-point Q3.4 arithmetic (ap_fixed&lt;8,4&gt;), achieving 4× model compression while maintaining 90% classification accuracy on CIFAR-10. Key optimizations include tree reduction for convolution achieving initiation interval II=1, and ping-pong DDR buffering for conflict-free memory management across 15 layers.</p>
+        <p>The project also navigated two significant engineering challenges: quantization divergence when jointly training weights and activations, and a critical rounding/truncation mismatch between PyTorch training and the default HLS fixed-point behavior — which collapsed hardware accuracy to 20% before being identified and corrected.</p>
+      </div>
+      <div class="overview-aside">
+        <div class="aside-block">
+          <div class="aside-block-label">Target Platform</div>
+          <div class="aside-block-val">Xilinx Kria KV260 · Zynq UltraScale+ XCK26</div>
+        </div>
+        <div class="aside-block">
+          <div class="aside-block-label">HLS Toolchain</div>
+          <div class="aside-block-val">Vitis HLS 2022.2 · 200 MHz</div>
+        </div>
+        <div class="aside-block">
+          <div class="aside-block-label">Quantization</div>
+          <div class="aside-block-val">Q3.4 Fixed-Point · AP_RND_CONV + AP_SAT</div>
+        </div>
+        <div class="aside-block">
+          <div class="aside-block-label">Dataset</div>
+          <div class="aside-block-val">CIFAR-10 · 224×224 upsampled</div>
+        </div>
+        <div class="aside-block">
+          <div class="aside-block-label">Course</div>
+          <div class="aside-block-val">EE 511 · USC</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRAINING PIPELINE -->
+  <div class="algo-section reveal">
+    <div class="algo-header">
+      <span class="algo-num">01</span>
+      <h2 class="algo-title">Training <em>Pipeline</em></h2>
+    </div>
+
+    <p class="section-label">Three-Stage QAT Approach</p>
+    <div class="pipeline">
+      <div class="pipeline-stage">
+        <div class="pipeline-num">FP32 Baseline</div>
+        <div class="pipeline-body">
+          <div class="pipeline-title">Full-Precision Training — 100 Epochs</div>
+          <div class="pipeline-desc">Standard SqueezeNet trained on CIFAR-10 (upsampled 224×224) with SGD + cosine annealing, data augmentation (random flips, crops, color jitter). Achieves 86.98% test accuracy. Establishes the accuracy ceiling before quantization.</div>
+        </div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-num">QAT Stage 1</div>
+        <div class="pipeline-body">
+          <div class="pipeline-title">Weight-Only Quantization — 5 Epochs</div>
+          <div class="pipeline-desc">Apply Q3.4 quantization to model weights only, keeping activations in full precision. Fine-tuned with Adam at lr=1e-4. Stabilizes the weight distribution before activations are introduced, avoiding the divergence seen with joint quantization.</div>
+        </div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-num">QAT Stage 2</div>
+        <div class="pipeline-body">
+          <div class="pipeline-title">Progressive Activation Quantization — 15 Epochs</div>
+          <div class="pipeline-desc">Gradually introduces activation quantization via a temperature schedule decreasing from 5.0 (soft) to 0.0 (hard). The straight-through estimator (STE) is used for gradient computation through the non-differentiable quantization operation. Temperature annealing prevents abrupt accuracy drops.</div>
+        </div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-num">QAT Stage 3</div>
+        <div class="pipeline-body">
+          <div class="pipeline-title">Hard Quantization Fine-Tuning — 10 Epochs</div>
+          <div class="pipeline-desc">Full hard quantization of both weights and activations with SGD at lr=1e-5. Achieves 81.55% accuracy — versus 23% with naive joint quantization. Final weights and biases are exported as INT8 binary files for FPGA loading.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cs-pair">
+      <div class="challenge-block">
+        <strong>Challenge — Joint Quantization Divergence</strong>
+        <p>Simultaneously quantizing both weights and activations during QAT caused severe model divergence, with accuracy collapsing to ~23%. The combined quantization noise created optimization instabilities that prevented convergence.</p>
+      </div>
+      <div class="solution-block">
+        <strong>Solution — Progressive Sequential Quantization</strong>
+        <p>Adopting the three-stage approach above — weight-only first, then temperature-annealed activation introduction, then hard fine-tuning — successfully maintained 81.55% accuracy after full Q3.4 quantization.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- HLS IMPLEMENTATION -->
+  <div class="algo-section reveal">
+    <div class="algo-header">
+      <span class="algo-num">02</span>
+      <h2 class="algo-title">HLS <em>Implementation</em></h2>
+    </div>
+
+    <p class="section-label">Fixed-Point Type Definitions</p>
+    <div class="code-block">
+      <pre><span class="cm">// Q3.4 format: 8-bit, 4 integer bits (incl. sign), 4 fractional bits</span>
+<span class="cm">// Range: [−8, 7.9375], Resolution: 0.0625 (2⁻⁴)</span>
+<span class="kw">typedef</span> ap_fixed&lt;8, 4, AP_RND_CONV, AP_SAT&gt; data_t;
+<span class="kw">typedef</span> ap_fixed&lt;8, 4, AP_RND_CONV, AP_SAT&gt; weight_t;
+<span class="kw">typedef</span> ap_fixed&lt;8, 4, AP_RND_CONV, AP_SAT&gt; bias_t;
+
+<span class="cm">// Wide accumulator prevents overflow during MAC operations</span>
+<span class="kw">typedef</span> ap_fixed&lt;24, 12, AP_RND_CONV, AP_SAT&gt; acc_t;</pre>
+    </div>
+    <p style="font-size:0.87rem;color:var(--muted);margin-bottom:1.75rem;line-height:1.7">AP_RND_CONV implements convergent (banker's) rounding, matching PyTorch's <code style="font-family:'IBM Plex Mono',monospace;font-size:0.85em">torch.round()</code>. AP_SAT matches <code style="font-family:'IBM Plex Mono',monospace;font-size:0.85em">torch.clamp()</code>. The 24-bit accumulator prevents overflow when summing across input channels.</p>
+
+    <p class="section-label">Convolution Tree Reduction (II=1)</p>
+    <ul class="bullet-list">
+      <li><strong>Problem</strong> — Naive loop-carried accumulation creates inter-iteration dependencies, preventing the HLS compiler from achieving II=1 on the inner channel loop.</li>
+      <li><strong>Solution</strong> — Separate partial sum registers for each of the 9 kernel positions (ARRAY_PARTITION complete) allow parallel accumulation across input channels. A DEPENDENCE inter=false pragma informs the compiler no cross-iteration dependency exists.</li>
+      <li><strong>Tree reduction</strong> — After the channel loop, the 9 partial sums are reduced in log₂ depth: 4 level-1 pairs → 2 level-2 sums → final bias addition. This eliminates the carry chain delay that would otherwise limit Fmax.</li>
+    </ul>
+
+    <div class="cs-pair">
+      <div class="challenge-block">
+        <strong>Challenge — Truncation vs. Rounding Mismatch</strong>
+        <p>After initial hardware deployment, the FPGA achieved only 20% accuracy (2/10 images) despite the software model achieving 81.55%. Layer-by-layer comparison using a NumPy reference implementation revealed maximum output deviations of 2.56 (41 LSBs) starting from the very first convolution. Root cause: default <code style="font-family:'IBM Plex Mono',monospace;font-size:0.85em">ap_fixed</code> uses truncation (round toward −∞), while PyTorch QAT used round-to-nearest. This seemingly minor difference accumulated catastrophically across 15+ layers.</p>
+      </div>
+      <div class="solution-block">
+        <strong>Solution — AP_RND_CONV + AP_SAT Mode</strong>
+        <p>Specifying explicit rounding and saturation modes in every fixed-point type definition (as shown above) made hardware arithmetic exactly match PyTorch's behavior. Hardware accuracy immediately recovered to 90% on the 10-image test set — exceeding the 81.55% software QAT baseline due to favorable rounding on specific samples.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEMORY + FSM -->
+  <div class="algo-section reveal">
+    <div class="algo-header">
+      <span class="algo-num">03</span>
+      <h2 class="algo-title">Memory &amp; <em>Control</em></h2>
+    </div>
+
+    <p class="section-label">Ping-Pong DDR Buffering</p>
+    <ul class="bullet-list">
+      <li><strong>Two 1.6 MB DDR buffers</strong> (buffer_a and buffer_b) alternate as source and destination across layers, preventing read/write conflicts without requiring on-chip BRAM large enough to hold full feature maps.</li>
+      <li><strong>740K parameters</strong> stored contiguously in DDR in layer order (737,568 weight bytes + 2,986 bias bytes), loaded once at startup via PYNQ DMA.</li>
+      <li><strong>Fire module squeeze buffer</strong> — the squeeze layer's output is stored in a dedicated DDR region at offset 1.5 MB within buffer_a to avoid BRAM overflow, then both expand paths (1×1 and 3×3) read from it in parallel.</li>
+      <li><strong>Expand channel interleaving</strong> — expand 1×1 writes to output channels 0–E₁−1, expand 3×3 writes to E₁–E₁+E₃−1, and ReLU is applied in-place using burst-buffered DMA transfers.</li>
+    </ul>
+
+    <p class="section-label">FSM Layer Sequencing</p>
+    <div class="fsm-grid">
+      <div class="fsm-cell">
+        <div class="fsm-state">IDLE</div>
+        <div class="fsm-desc">Wait for AP_START signal from PS</div>
+      </div>
+      <div class="fsm-cell">
+        <div class="fsm-state">CONV1</div>
+        <div class="fsm-desc">7×7 conv · 3→96 ch · 224→112</div>
+      </div>
+      <div class="fsm-cell">
+        <div class="fsm-state">POOL1</div>
+        <div class="fsm-desc">Max pool · 112×112→56×56</div>
+      </div>
+      <div class="fsm-cell">
+        <div class="fsm-state">FIRE 2–4</div>
+        <div class="fsm-desc">Fire modules + pool after Fire4</div>
+      </div>
+      <div class="fsm-cell">
+        <div class="fsm-state">FIRE 5–8</div>
+        <div class="fsm-desc">Fire modules + pool after Fire8</div>
+      </div>
+      <div class="fsm-cell">
+        <div class="fsm-state">FIRE9</div>
+        <div class="fsm-desc">Final Fire module · 14×14 maps</div>
+      </div>
+      <div class="fsm-cell">
+        <div class="fsm-state">CONV10</div>
+        <div class="fsm-desc">1×1 classifier · 512→10 ch</div>
+      </div>
+      <div class="fsm-cell">
+        <div class="fsm-state">GAP</div>
+        <div class="fsm-desc">Global average pool → 10 logits</div>
+      </div>
+      <div class="fsm-cell">
+        <div class="fsm-state">DONE</div>
+        <div class="fsm-desc">Assert AP_DONE · PS reads output</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="algo-section reveal">
+    <div class="algo-header">
+      <span class="algo-num">04</span>
+      <h2 class="algo-title">Results &amp; <em>Analysis</em></h2>
+    </div>
+
+    <p class="section-label">Classification Accuracy — CIFAR-10</p>
+    <table class="acc-table">
+      <thead>
+        <tr><th>Model Configuration</th><th>Accuracy</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>FP32 Baseline (PyTorch)</td><td class="val good">86.98%</td><td>100 epochs, SGD + cosine annealing</td></tr>
+        <tr><td>Joint QAT (failed approach)</td><td class="val bad">23.4%</td><td>Simultaneous weight + activation quantization</td></tr>
+        <tr><td>Progressive QAT (Weight → Activation)</td><td class="val good">81.55%</td><td>Three-stage approach, full test set</td></tr>
+        <tr><td>Hardware with Truncation (before fix)</td><td class="val bad">20% (2/10)</td><td>Default ap_fixed truncation behavior</td></tr>
+        <tr class="highlight"><td>Hardware with Rounding (after fix)</td><td class="val good">90% (9/10)</td><td>AP_RND_CONV + AP_SAT — final result</td></tr>
+      </tbody>
+    </table>
+
+    <p class="section-label">FPGA Resource Utilization — Kria KV260 @ 200 MHz</p>
+    <div class="resource-grid">
+      <div class="resource-cell">
+        <div class="resource-key">CLB LUT</div>
+        <div class="resource-val">31.38%</div>
+        <div class="resource-sub">36,752 / 117,120</div>
+      </div>
+      <div class="resource-cell">
+        <div class="resource-key">CLB Registers (FF)</div>
+        <div class="resource-val">17.98%</div>
+        <div class="resource-sub">42,122 / 234,240</div>
+      </div>
+      <div class="resource-cell">
+        <div class="resource-key">Block RAM</div>
+        <div class="resource-val">37.15%</div>
+        <div class="resource-sub">53.5 / 144 tiles</div>
+      </div>
+      <div class="resource-cell">
+        <div class="resource-key">DSP Slices</div>
+        <div class="resource-val">7.05%</div>
+        <div class="resource-sub">88 / 1,248</div>
+      </div>
+      <div class="resource-cell">
+        <div class="resource-key">LUT as Memory</div>
+        <div class="resource-val">8.66%</div>
+        <div class="resource-sub">4,990 / 57,600</div>
+      </div>
+      <div class="resource-cell">
+        <div class="resource-key">Global Clk Buffers</div>
+        <div class="resource-val">1.42%</div>
+        <div class="resource-sub">5 / 352</div>
+      </div>
+    </div>
+
+    <p class="section-label">Resource Headroom</p>
+    <div class="bar-list">
+      <div class="bar-row">
+        <span class="bar-label">CLB LUT</span>
+        <div class="bar-track"><div class="bar-fill" style="width:31.38%"></div></div>
+        <span class="bar-pct">31.38%</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Block RAM</span>
+        <div class="bar-track"><div class="bar-fill" style="width:37.15%"></div></div>
+        <span class="bar-pct">37.15%</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Flip-Flops</span>
+        <div class="bar-track"><div class="bar-fill" style="width:17.98%"></div></div>
+        <span class="bar-pct">17.98%</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">DSP</span>
+        <div class="bar-track"><div class="bar-fill" style="width:7.05%"></div></div>
+        <span class="bar-pct">7.05%</span>
+      </div>
+    </div>
+
+    <p class="section-label">Power Breakdown — 3.377 W Total</p>
+    <div class="power-grid">
+      <div class="power-cell">
+        <div class="power-key">Processing System (PS)</div>
+        <div class="power-val">2.429 W</div>
+        <div class="power-pct">71.9% of total</div>
+      </div>
+      <div class="power-cell">
+        <div class="power-key">Programmable Logic (PL)</div>
+        <div class="power-val">0.644 W</div>
+        <div class="power-pct">19.1% of total</div>
+      </div>
+      <div class="power-cell">
+        <div class="power-key">Logic</div>
+        <div class="power-val">0.255 W</div>
+        <div class="power-pct">7.5% of dynamic</div>
+      </div>
+      <div class="power-cell">
+        <div class="power-key">Signals</div>
+        <div class="power-val">0.165 W</div>
+        <div class="power-pct">4.9% of dynamic</div>
+      </div>
+      <div class="power-cell">
+        <div class="power-key">BRAM</div>
+        <div class="power-val">0.068 W</div>
+        <div class="power-pct">2.0% of dynamic</div>
+      </div>
+      <div class="power-cell">
+        <div class="power-key">Junction Temperature</div>
+        <div class="power-val">32.8 °C</div>
+        <div class="power-pct">52.2°C thermal margin remaining</div>
+      </div>
+    </div>
+
+    <div class="note-block">
+      <p><strong>DSP Headroom</strong> — At only 7.05% DSP utilization (88 of 1,248), significant parallelism headroom exists. Unrolling the output channel loop by a factor of 8–16 would proportionally reduce computation time. Combined with line-buffer architecture for 3×3 convolutions (projected 10× memory traffic reduction in Fire9 expand3×3 alone), inference latency could drop from ~30 s to 2–4 s per image.</p>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="proj-actions reveal">
+    <a href="index.html#ml" class="btn btn-fill">← Back to ML Projects</a>
+    <a href="https://github.com/sreeharikk25/EE511_FinalProject" class="btn btn-line" target="_blank" rel="noopener">View on GitHub</a>
+    <a href="index.html" class="btn btn-line">All Projects</a>
+    <a href="index.html#contact" class="btn btn-line">Contact</a>
+  </div>
+
+</div>
+
+<footer>
+  <p>© 2026 Daniel Carrascoza</p>
+  <p>RTL · ML · VLSI · Software</p>
+</footer>
+
+<script>
+  const obs = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          obs.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.07, rootMargin: '0px 0px -20px 0px' }
+  );
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

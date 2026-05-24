@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hardware-Accelerated Mini IDS — Daniel Carrascoza</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;1,300;1,400&family=Karla:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#f7f4ef;--bg2:#ede7dc;--bg3:#e3dbd0;
+      --text:#1c1b18;--muted:#6b6456;--faint:#a39887;
+      --accent:#4a7a5a;--border:rgba(90,70,50,0.13);--border2:rgba(90,70,50,0.26);
+    }
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--text);font-family:'Karla',sans-serif;font-weight:300;line-height:1.7}
+    body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 70% 55% at 92% 8%,rgba(100,150,80,0.08),transparent),
+                 radial-gradient(ellipse 45% 60% at 4% 92%,rgba(80,130,60,0.06),transparent)}
+    *{position:relative;z-index:1}
+    a{color:inherit;text-decoration:none}
+
+    /* NAV */
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;
+      display:flex;justify-content:space-between;align-items:center;
+      padding:1.1rem 3.5rem;
+      background:rgba(247,244,239,0.86);backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--border)}
+    .nav-logo{font-family:'Cormorant Garant',serif;font-size:1.1rem;font-weight:400;cursor:pointer}
+    .nav-links{display:flex;gap:2rem;list-style:none}
+    .nav-links a{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;letter-spacing:0.09em;
+      text-transform:uppercase;color:var(--muted);transition:color 0.2s}
+    .nav-links a:hover{color:var(--accent)}
+
+    /* BUTTONS */
+    .btn{font-family:'IBM Plex Mono',monospace;font-size:0.69rem;letter-spacing:0.08em;
+      text-transform:uppercase;padding:0.65rem 1.4rem;border-radius:1px;
+      transition:all 0.2s;cursor:pointer;display:inline-flex;align-items:center;gap:0.5rem}
+    .btn-fill{background:var(--accent);color:#fff;border:1px solid var(--accent)}
+    .btn-fill:hover{background:#3d6b4c}
+    .btn-line{border:1px solid var(--border2);color:var(--muted)}
+    .btn-line:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* LAYOUT */
+    .detail-wrap{padding:7rem 3.5rem 5rem;max-width:920px;margin:0 auto}
+
+    .back-btn{display:inline-flex;align-items:center;gap:0.5rem;
+      font-family:'IBM Plex Mono',monospace;font-size:0.7rem;letter-spacing:0.08em;
+      text-transform:uppercase;color:var(--muted);background:none;border:none;
+      cursor:pointer;padding:0;margin-bottom:3rem;transition:color 0.2s}
+    .back-btn::before{content:'←'}
+    .back-btn:hover{color:var(--accent)}
+
+    .proj-field-badge{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;
+      letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:0.75rem}
+    .proj-title{font-family:'Cormorant Garant',serif;font-size:clamp(2.2rem,5vw,4rem);
+      font-weight:300;line-height:1.05;margin-bottom:0.5rem}
+    .proj-subtitle{font-family:'Cormorant Garant',serif;font-size:1.1rem;font-style:italic;
+      color:var(--muted);margin-bottom:2rem}
+
+    /* TAGS */
+    .meta-row{display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:2.5rem}
+    .tag{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;letter-spacing:0.04em;
+      padding:0.2rem 0.55rem;background:var(--bg2);border:1px solid var(--border);color:var(--muted)}
+    .tag-a{background:rgba(74,122,90,0.09);border-color:rgba(74,122,90,0.28);color:var(--accent)}
+
+    /* STAT GRID */
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      gap:1px;background:var(--border);border:1px solid var(--border);margin:0 0 3rem}
+    .stat-card{background:var(--bg);padding:1.25rem 1.5rem}
+    .stat-v{font-family:'Cormorant Garant',serif;font-size:2.2rem;font-weight:300;line-height:1}
+    .stat-l{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-top:0.3rem}
+
+    /* SECTION LABEL */
+    .section-label{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;
+      letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);
+      margin-bottom:1rem;padding-bottom:0.6rem;border-bottom:1px solid var(--border)}
+
+    /* OVERVIEW */
+    .overview-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:3.5rem;margin-bottom:3.5rem;align-items:start}
+    .overview-text p{font-size:0.93rem;color:var(--muted);line-height:1.75;margin-bottom:0.9rem}
+    .aside-block{padding:1.25rem 1.5rem;background:var(--bg2);border:1px solid var(--border);margin-bottom:1px}
+    .aside-block-label{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;letter-spacing:0.1em;
+      text-transform:uppercase;color:var(--faint);margin-bottom:0.5rem}
+    .aside-block-val{font-family:'Cormorant Garant',serif;font-size:1rem;font-weight:400;color:var(--text)}
+
+    /* SECTION HEADERS */
+    .algo-section{margin-bottom:3.5rem}
+    .algo-header{display:grid;grid-template-columns:auto 1fr;gap:1.25rem;
+      align-items:baseline;margin-bottom:1.75rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border2)}
+    .algo-num{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:var(--faint);letter-spacing:0.1em}
+    .algo-title{font-family:'Cormorant Garant',serif;font-size:clamp(1.5rem,2.8vw,2.1rem);
+      font-weight:300;line-height:1.1}
+    .algo-title em{font-style:italic;color:var(--accent)}
+
+    /* BULLET LIST */
+    .bullet-list{list-style:none;display:flex;flex-direction:column;gap:0.85rem;margin-bottom:1.5rem}
+    .bullet-list li{padding-left:1.5rem;position:relative;font-size:0.93rem;color:var(--muted);line-height:1.7}
+    .bullet-list li::before{content:'—';position:absolute;left:0;color:var(--accent);
+      font-family:'IBM Plex Mono',monospace;font-size:0.85rem}
+
+    /* DATA FLOW */
+    .flow-row{display:flex;align-items:stretch;flex-wrap:wrap;gap:0;margin:1.75rem 0}
+    .flow-node{background:var(--bg);border:1px solid var(--border2);
+      padding:0.75rem 1rem;text-align:center;min-width:100px;flex:1}
+    .flow-node-label{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;
+      letter-spacing:0.08em;text-transform:uppercase;color:var(--accent)}
+    .flow-node-sub{font-family:'Karla',sans-serif;font-size:0.75rem;color:var(--faint);margin-top:0.2rem;line-height:1.4}
+    .flow-arrow{font-family:'IBM Plex Mono',monospace;font-size:0.9rem;color:var(--faint);
+      padding:0 0.4rem;flex-shrink:0;display:flex;align-items:center}
+
+    /* Q&A */
+    .qa-block{border:1px solid var(--border);margin-bottom:1px}
+    .qa-q{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:0.06em;
+      color:var(--accent);padding:0.9rem 1.25rem 0.4rem;text-transform:uppercase}
+    .qa-a{font-size:0.9rem;color:var(--muted);line-height:1.7;padding:0 1.25rem 0.9rem}
+
+    /* NOTE / WARNING BLOCKS */
+    .note-block{border-left:2px solid var(--accent);padding:0.9rem 1.25rem;
+      background:rgba(74,122,90,0.05);margin:1.75rem 0}
+    .note-block p{font-size:0.88rem;color:var(--muted);line-height:1.7}
+    .note-block strong{font-weight:500;color:var(--text);font-family:'IBM Plex Mono',monospace;
+      font-size:0.75rem;letter-spacing:0.06em;text-transform:uppercase}
+
+    /* ── SCHEMATIC IMAGE SLOTS ── */
+    .schematic-grid{display:grid;grid-template-columns:1fr;gap:1px;background:var(--border);
+      border:1px solid var(--border);margin:1.75rem 0}
+    .schematic-grid.two-col{grid-template-columns:1fr 1fr}
+
+    .schematic-slot{background:var(--bg2);position:relative;overflow:hidden}
+
+    /* When an <img> is placed inside the slot it fills it */
+    .schematic-slot img{
+      display:block;width:100%;height:auto;
+      border:none;
+    }
+
+    /* Placeholder shown only when the slot has NO img child */
+    .schematic-slot:not(:has(img)) .sch-placeholder{display:flex}
+    .schematic-slot:has(img) .sch-placeholder{display:none}
+
+    .sch-placeholder{
+      min-height:260px;
+      flex-direction:column;align-items:center;justify-content:center;
+      gap:0.75rem;padding:2rem;text-align:center;
+      border:2px dashed var(--border2);
+    }
+    .sch-placeholder-icon{
+      width:48px;height:48px;border:1px solid var(--border2);
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.3rem;color:var(--faint);background:var(--bg3)
+    }
+    .sch-placeholder-name{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;
+      letter-spacing:0.08em;color:var(--accent)}
+    .sch-placeholder-hint{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;
+      color:var(--faint);letter-spacing:0.04em}
+
+    .schematic-caption{
+      padding:0.75rem 1rem;background:var(--bg);border-top:1px solid var(--border);
+      font-family:'IBM Plex Mono',monospace;font-size:0.65rem;letter-spacing:0.07em;
+      text-transform:uppercase;color:var(--faint);display:flex;
+      justify-content:space-between;align-items:center
+    }
+    .schematic-caption span.badge{
+      background:rgba(74,122,90,0.09);border:1px solid rgba(74,122,90,0.28);
+      color:var(--accent);padding:0.15rem 0.5rem;font-size:0.6rem
+    }
+
+    /* MODULE CARDS */
+    .module-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+      gap:1px;background:var(--border);border:1px solid var(--border);margin:1.75rem 0}
+    .module-card{background:var(--bg);padding:1.25rem 1.5rem}
+    .module-name{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;letter-spacing:0.07em;
+      text-transform:uppercase;color:var(--accent);margin-bottom:0.5rem}
+    .module-desc{font-size:0.87rem;color:var(--muted);line-height:1.65}
+
+    /* ACTIONS */
+    .proj-actions{margin-top:3.5rem;padding-top:2rem;border-top:1px solid var(--border);
+      display:flex;gap:0.75rem;flex-wrap:wrap}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:1.5rem 3.5rem;
+      display:flex;justify-content:space-between;align-items:center}
+    footer p{font-family:'IBM Plex Mono',monospace;font-size:0.65rem;
+      letter-spacing:0.07em;color:var(--faint)}
+
+    /* REVEAL */
+    .reveal{opacity:0;transform:translateY(14px);transition:opacity 0.65s ease,transform 0.65s ease}
+    .reveal.visible{opacity:1;transform:none}
+    @keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+    /* RESPONSIVE */
+    @media(max-width:900px){
+      nav{padding:1rem 1.5rem}
+      .detail-wrap{padding:6rem 1.5rem 4rem}
+      .overview-grid{grid-template-columns:1fr;gap:2rem}
+      .schematic-grid.two-col{grid-template-columns:1fr}
+      .flow-row{flex-direction:column}
+      .flow-arrow{transform:rotate(90deg);align-self:center}
+      footer{flex-direction:column;gap:0.5rem;padding:1.5rem}
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo" onclick="window.location.href='index.html'">Daniel Carrascoza</span>
+  <ul class="nav-links">
+    <li><a href="index.html#rtl">RTL</a></li>
+    <li><a href="index.html#ml">ML</a></li>
+    <li><a href="index.html#swe">SWE</a></li>
+    <li><a href="index.html#vlsi">VLSI</a></li>
+    <li><a href="index.html#about">About</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<div class="detail-wrap">
+
+  <!-- BACK -->
+  <button class="back-btn" onclick="window.location.href='index.html'">Back to Portfolio</button>
+
+  <!-- HEADER -->
+  <div style="opacity:0;animation:up 0.7s 0.1s ease forwards">
+    <p class="proj-field-badge">NetFPGA / Packet Processing · EE 533</p>
+    <h1 class="proj-title">Hardware-Accelerated<br><em>Mini IDS</em></h1>
+    <p class="proj-subtitle">Inline packet-stream pattern matching engine on NetFPGA-v2 (Virtex-2 Pro) with sliding-window comparator and FIFO-backed drop logic</p>
+    <div class="meta-row">
+      <span class="tag tag-a">Verilog</span>
+      <span class="tag tag-a">NetFPGA-v2</span>
+      <span class="tag tag-a">Virtex-2 Pro</span>
+      <span class="tag">ECS Schematic</span>
+      <span class="tag">Block RAM FIFO</span>
+      <span class="tag">Sliding-Window Comparator</span>
+      <span class="tag">Wildcard Masking</span>
+      <span class="tag">Perl Traffic Gen</span>
+    </div>
+  </div>
+
+  <!-- STAT GRID -->
+  <div class="stat-grid reveal">
+    <div class="stat-card">
+      <div class="stat-v">400</div>
+      <div class="stat-l">MB/s Throughput</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">56-bit</div>
+      <div class="stat-l">Sliding Window</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">7-bit</div>
+      <div class="stat-l">Wildcard Mask (AMASK)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">19 B</div>
+      <div class="stat-l">FIFO Entry Width</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">5</div>
+      <div class="stat-l">Schematic Modules</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-v">1</div>
+      <div class="stat-l">Clock Cycle Match Latency</div>
+    </div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="algo-section reveal">
+    <p class="section-label">Overview</p>
+    <div class="overview-grid">
+      <div class="overview-text">
+        <p>The Mini Intrusion Detection System is a hardware pattern-matching engine implemented via schematic capture in Xilinx ECS, targeting the NetFPGA-v2 platform (Virtex-2 Pro). It performs inline inspection of a live packet data stream, comparing each byte window against a stored signature pattern without interrupting throughput.</p>
+        <p>The design uses a sliding-window architecture: a 9-byte pipeline register (reg9B) retains the tail of the previous cycle's data, which is merged with the current 8-byte pipe1 stream to form a 14-byte (112-bit) window. Seven 56-bit comparator instances scan every possible alignment of the 7-byte pattern within that window, asserting a match signal if any position matches — subject to a 7-bit wildcard mask (AMASK). A matched packet is held in a 19-byte-wide dual-port block-RAM FIFO (dropfifo) until it can be flagged or dropped.</p>
+        <p>All Verilog netlists were auto-generated from ECS schematics, synthesized, and validated in simulation with Perl-generated traffic covering boundary cases.</p>
+      </div>
+      <div class="overview-aside">
+        <div class="aside-block">
+          <div class="aside-block-label">Target Platform</div>
+          <div class="aside-block-val">NetFPGA-v2 · Virtex-2 Pro</div>
+        </div>
+        <div class="aside-block">
+          <div class="aside-block-label">Design Entry</div>
+          <div class="aside-block-val">Xilinx ECS Schematic + Generated Verilog</div>
+        </div>
+        <div class="aside-block">
+          <div class="aside-block-label">Simulation</div>
+          <div class="aside-block-val">ModelSim · Perl traffic generator</div>
+        </div>
+        <div class="aside-block">
+          <div class="aside-block-label">Completed</div>
+          <div class="aside-block-val">January 2026 (Jan 30 – 31)</div>
+        </div>
+        <div class="aside-block">
+          <div class="aside-block-label">Course</div>
+          <div class="aside-block-val">EE 533 · USC</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA FLOW -->
+  <div class="algo-section reveal">
+    <div class="algo-header">
+      <span class="algo-num">01</span>
+      <h2 class="algo-title">Pipeline <em>Data Flow</em></h2>
+    </div>
+    <p class="section-label">Signal Path</p>
+    <div class="flow-row">
+      <div class="flow-node">
+        <div class="flow-node-label">pipe1[71:0]</div>
+        <div class="flow-node-sub">Live 8-byte stream input</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">
+        <div class="flow-node-label">reg9B</div>
+        <div class="flow-node-sub">9-byte pipeline register (FD8CE + FD16CE chain)</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">
+        <div class="flow-node-label">busmerge</div>
+        <div class="flow-node-sub">pipe0[47:0] ∥ pipe1[63:0] → 112-bit window</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">
+        <div class="flow-node-label">wordmatch</div>
+        <div class="flow-node-sub">7× 56-bit masked comparators → OR → match</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">
+        <div class="flow-node-label">FDCE</div>
+        <div class="flow-node-sub">Match register (match_en gated)</div>
+      </div>
+    </div>
+
+    <ul class="bullet-list">
+      <li><strong>reg9B</strong> — Stores the 9 trailing bytes of the previous pipe1 cycle using a banked chain of FD8CE and FD16CE registers (1×8-bit + 4×16-bit), all sharing the same CE and CLR. Its output (pipe0) feeds busmerge alongside the current pipe1.</li>
+      <li><strong>busmerge</strong> — Concatenates pipe0[47:0] (6 bytes from the previous word) with pipe1[63:0] (8 current bytes) to produce a 112-bit window (datain[111:0]), ensuring no gap where a 7-byte pattern could straddle a word boundary.</li>
+      <li><strong>wordmatch</strong> — Instantiates 7 comparator modules, each checking a different byte offset of datain[111:0] against datacomp[55:0] (the 7-byte pattern from hwregA). AMASK[6:0] masks out don't-care bytes; any byte whose mask bit is set is excluded from the equality check. All 7 match outputs are OR'd together — if any position matches, the match line is asserted.</li>
+      <li><strong>detect7B output register</strong> — An AND3B1 gate combines the raw match signal with match_en and the inverted current-match state. If match_en is high and no match is already latched, the new match is stored into the FDCE output register and driven out as the match signal.</li>
+    </ul>
+  </div>
+
+  <!-- MODULE BREAKDOWN -->
+  <div class="algo-section reveal">
+    <div class="algo-header">
+      <span class="algo-num">02</span>
+      <h2 class="algo-title">Module <em>Breakdown</em></h2>
+    </div>
+
+    <div class="module-grid">
+      <div class="module-card">
+        <div class="module-name">comparator.sch</div>
+        <div class="module-desc">Seven COMP8 instances chained to form a full 56-bit equality comparator. Each COMP8 checks 8 bits of the data window against the pattern, gated by one AMASK bit. Results are AND-reduced; also reused in dropfifo to compare read/write FIFO pointers.</div>
+      </div>
+      <div class="module-card">
+        <div class="module-name">detect7B.sch</div>
+        <div class="module-desc">Top-level pattern-match engine. Instantiates reg9B, busmerge, wordmatch, and the FDCE output register. Connects hwregA (pattern), match_en, mrst, pipe1, clk, and CE. The AND3B1 gate ensures match is only latched when enabled and not already active.</div>
+      </div>
+      <div class="module-card">
+        <div class="module-name">reg9B.sch</div>
+        <div class="module-desc">A 9-byte (72-bit) pipeline register implemented as one FD8CE (bits 71:64) and four FD16CE blocks (bits 63:48, 47:32, 31:16, 15:0). All share CE and CLR, clocked together to hold the previous pipe1 word for the busmerge sliding window.</div>
+      </div>
+      <div class="module-card">
+        <div class="module-name">wordmatch.sch</div>
+        <div class="module-desc">Instantiates 7 comparator modules, each receiving a different 56-bit slice of the 112-bit datain window (offsets 0, 8, 16, 24, 32, 40, 48 bits). All share the same datacomp[55:0] pattern and wildcard[6:0] mask. Outputs are OR8'd into a single match line.</div>
+      </div>
+      <div class="module-card">
+        <div class="module-name">dropfifo.sch</div>
+        <div class="module-desc">19-byte-wide dual-port block RAM FIFO (dual19Bmem) with CB8CLE/CB8CE 8-bit counters for read/write address management. Two COMP8 instances compare addresses; if equal, the write register is not enabled, preventing overwrite. FDC outputs valid_data when a matched packet entry is ready.</div>
+      </div>
+    </div>
+
+    <div class="note-block">
+      <p><strong>Design Entry Note</strong> — All modules were designed as ECS schematics in Xilinx ISE. The Verilog netlists (e.g. <code style="font-family:'IBM Plex Mono',monospace;font-size:0.85em">detect78.v</code>, <code style="font-family:'IBM Plex Mono',monospace;font-size:0.85em">wordmatch.v</code>) were auto-generated by ECS and are not intended for manual editing per the tool's synthesis directives.</p>
+    </div>
+  </div>
+
+  <!-- SCHEMATICS -->
+  <div class="algo-section reveal">
+    <div class="algo-header">
+      <span class="algo-num">03</span>
+      <h2 class="algo-title">Design <em>Schematics</em></h2>
+    </div>
+
+    <!-- detect7B — full width -->
+    <div class="schematic-grid" style="margin-bottom:1px">
+      <div class="schematic-slot">
+        <img src="images-mini-ids/detect7B.png" alt="detect7B.sch — top-level pattern match engine">
+        <div class="schematic-caption">
+          detect7B.sch — Top-level engine: reg9B · busmerge · wordmatch · FDCE
+          <span class="badge">Primary</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- comparator + wordmatch — side by side -->
+    <div class="schematic-grid two-col" style="margin-bottom:1px">
+      <div class="schematic-slot">
+        <img src="images-mini-ids/comparator.png" alt="comparator.sch">
+        <div class="schematic-caption">
+          comparator.sch — 7× COMP8 · 56-bit masked equality
+          <span class="badge">Sub-module</span>
+        </div>
+      </div>
+      <div class="schematic-slot">
+        <img src="images-mini-ids/wordmatch.png" alt="wordmatch.sch">
+        <div class="schematic-caption">
+          wordmatch.sch — 7 comparators · OR8 · match output
+          <span class="badge">Sub-module</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- reg9B + dropfifo — side by side -->
+    <div class="schematic-grid two-col">
+      <div class="schematic-slot">
+        <img src="images-mini-ids/reg9B.png" alt="reg9B.sch">
+        <div class="schematic-caption">
+          reg9B.sch — FD8CE + 4× FD16CE · 72-bit pipeline register
+          <span class="badge">Sub-module</span>
+        </div>
+      </div>
+      <div class="schematic-slot">
+        <img src="images-mini-ids/dropfifo.png" alt="dropfifo.sch">
+        <div class="schematic-caption">
+          dropfifo.sch — dual19Bmem · CB8CLE/CE · COMP8 addr compare · FDC
+          <span class="badge">Sub-module</span>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="proj-actions reveal">
+    <a href="index.html#rtl" class="btn btn-fill">← Back to RTL Projects</a>
+    <a href="https://github.com/danielcarrascoza/mini-instruction-detection-engine" class="btn btn-line" target="_blank" rel="noopener">View on GitHub</a>
+    <a href="index.html" class="btn btn-line">All Projects</a>
+    <a href="index.html#contact" class="btn btn-line">Contact</a>
+  </div>
+
+</div><!-- /detail-wrap -->
+
+<footer>
+  <p>© 2026 Daniel Carrascoza</p>
+  <p>RTL · ML · VLSI · Software</p>
+</footer>
+
+<script>
+  const obs = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          obs.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.07, rootMargin: '0px 0px -20px 0px' }
+  );
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
